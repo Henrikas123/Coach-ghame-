@@ -32,6 +32,11 @@ local dataApi = getDataApi()
 local function ensureStarterStudent(profile)
 	if #profile.studentsList == 0 then
 		local starter = DataSchema.newStudent("Alex Martin")
+		-- Pirmas kovotojas atvyksta jau pasitreniraves: po 2 treniruociu jis paruostas kovai,
+		-- todel pamoka per ~5 min nuveda iki pirmos kovos (anksciau reikejo ~24 treniruociu)
+		for statId in pairs(starter.stats) do
+			starter.stats[statId] = math.min(14, (starter.statPotential and starter.statPotential[statId]) or 14)
+		end
 		starter.karjerosStadija = "Member"
 		starter.satisfactionScore = 100
 		starter.morale = 100

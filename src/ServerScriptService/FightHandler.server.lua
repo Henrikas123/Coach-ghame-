@@ -243,6 +243,7 @@ local function runFight(player, profile, student, studentIndex)
 
 		profile.lifetimeFightsWon = (profile.lifetimeFightsWon or 0) + 1
 		if _G.CoachAcademyRetention then _G.CoachAcademyRetention.track(player, "fightWon", 1) end -- kasdienes uzduotys
+		if _G.CoachAcademyRetention then _G.CoachAcademyRetention.track(player, "fightDone", 1) end -- pamoka
 		push(player, {
 			phase = "result",
 			won = true,
@@ -274,6 +275,7 @@ local function runFight(player, profile, student, studentIndex)
 				math.ceil(student.injuryRecoverySeconds / 60)			)
 		end
 
+		if _G.CoachAcademyRetention then _G.CoachAcademyRetention.track(player, "fightDone", 1) end -- pamoka
 		push(player, {
 			phase = "result",
 			won = false,

@@ -104,7 +104,7 @@ local modulesFolder = make("Folder", "Modules", ReplicatedStorage)
 local MODULES = {
 	"DataSchema", "TrainingConfig", "EquipmentConfig", "MarketingConfig", "FightConfig", "AcademyConfig",
 	"InjuryConfig", "StaffConfig", "ScoutConfig", "SponsorConfig", "TournamentConfig", "MainHUDController",
-	"SoundConfig", "Sfx", "IconConfig", "RetentionConfig",
+	"SoundConfig", "Sfx", "IconConfig", "RetentionConfig", "TutorialConfig",
 }
 for _, name in ipairs(MODULES) do
 	local source = readFirst({
@@ -138,7 +138,7 @@ for _, name in ipairs({
 	"FireStaffRequest", "StaffUpdate", "ScoutSearchRequest", "ScoutRecruitRequest", "ScoutUpdate",
 	"SponsorRefreshRequest", "SponsorAcceptRequest", "SponsorCollectRequest", "SponsorUpdate",
 	"TournamentRefreshRequest", "TournamentEnterRequest", "TournamentUpdate",
-	"RetentionUpdate", "RetentionRequest",
+	"RetentionUpdate", "RetentionRequest", "TutorialUpdate", "TutorialRequest",
 }) do
 	make("RemoteEvent", name, remotesFolder)
 end
@@ -169,7 +169,7 @@ make("TextLabel", "NameLabel", billboard)
 local SERVER_SCRIPTS = {
 	"DataStoreHandler", "TrainingHandler", "EquipmentHandler", "MarketingHandler", "ReputationHandler",
 	"FightHandler", "AcademyHandler", "StyleHandler", "MoraleHandler", "InjuryHandler", "StaffHandler",
-	"ScoutHandler", "SponsorHandler", "TournamentHandler", "PanelDataHandler", "RetentionHandler",
+	"ScoutHandler", "SponsorHandler", "TournamentHandler", "PanelDataHandler", "RetentionHandler", "TutorialHandler",
 }
 local serverScripts = {}
 for _, name in ipairs(SERVER_SCRIPTS) do
@@ -247,7 +247,7 @@ end
 -- Client scripts
 local starterScripts = {}
 local clientList = scenario.legacyScripts and { "MainHUDBootstrap", "PanelsBootstrap", "ReputationUI", "AcademyUI", "PhoneUI" }
-	or { "MainHUDBootstrap", "PanelsBootstrap", "ReputationUI" }
+	or { "MainHUDBootstrap", "PanelsBootstrap", "ReputationUI", "Tutorial" }
 local playerScripts = make("Folder", "PlayerScripts", player)
 if scenario.intro then
 	-- krovimo ekranas (ReplicatedFirst) paleidziamas pirmas, tada titulinis ekranas

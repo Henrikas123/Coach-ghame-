@@ -130,6 +130,10 @@ local function push(player, profile, message)
 end
 
 local function track(player, event, amount)
+	-- the first-minutes tutorial listens to the same events
+	if _G.CoachAcademyTutorial then
+		_G.CoachAcademyTutorial.onEvent(player, event, amount or 1)
+	end
 	local profile = dataApi and dataApi.getProfile(player)
 	if not profile then
 		return

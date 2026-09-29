@@ -118,6 +118,8 @@ for name, className in pairs({
 	RetentionUpdate = "RemoteEvent",
 	RetentionRequest = "RemoteEvent",
 	LeaderboardFetch = "RemoteFunction",
+	TutorialUpdate = "RemoteEvent",
+	TutorialRequest = "RemoteEvent",
 }) do
 	if not Remotes:FindFirstChild(name) then
 		local remote = Instance.new(className)

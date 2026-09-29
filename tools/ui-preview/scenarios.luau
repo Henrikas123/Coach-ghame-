@@ -33,6 +33,9 @@ local function student(name, opts)
 end
 
 local function richSeed(profile, now)
+	-- patyres zaidejas: pamoka baigta, siandienos prizas jau atsiimtas (kitaip atsidarytu Daily Goals)
+	profile.tutorial = { step = 99, done = true }
+	profile.daily = { lastClaimDay = now // 86400, streak = 1 }
 	profile.pinigai = 2450
 	profile.reputacija = 22
 	profile.followers = 1340
@@ -652,6 +655,71 @@ S.flow_daily_popup = {
 	check = function(api)
 		local goals = api.find("Panel_Goals")
 		assert(goals and goals.Visible, "daily goals did not open after PLAY")
+	end,
+}
+-- ============================================================
+-- PAMOKA (naujas zaidejas)
+-- ============================================================
+S.tutorial_start = { seed = freshSeed }
+S.tutorial_phone = { seed = freshSeed, viewport = "phone" }
+S.flow_tutorial = {
+	seed = freshSeed,
+	run = function(api)
+		api.click("CoachTutorial/Card/ActionButton") -- 1 welcome
+		api.wait(1)
+		api.open("Academy") -- 2 meet
+		api.wait(1)
+		api.state().sharedG.CoachAcademyRetention.track(api.player(), "train", 2) -- 3 train x2
+		api.wait(0.5)
+	end,
+	check = function(api)
+		local t = api.profile().tutorial
+		assert(t.step == 4 and not t.done, "tutorial should be at the fight step, got " .. tostring(t.step))
+		local alex = api.profile().studentsList[1]
+		assert(alex and alex.stats.power == 14, "starter fighter should start at 14")
+	end,
+}
+S.flow_tutorial_train = {
+	seed = freshSeed,
+	run = function(api)
+		api.click("CoachTutorial/Card/ActionButton")
+		api.wait(1)
+		api.open("Academy")
+		api.wait(1)
+		api.open("Academy")
+		local remote = api.state().getService("ReplicatedStorage").Remotes.TrainingRequest
+		for _ = 1, 2 do
+			api.serverRun(function()
+				remote.OnServerEvent:Fire(api.player(), "Power", "Group", 1)
+			end, 2)
+		end
+	end,
+	check = function(api)
+		local alex = api.profile().studentsList[1]
+		assert(alex.competitionReady == true, "Alex should be fight-ready after 2 sessions (power " .. tostring(alex.stats.power) .. ")")
+		assert(api.profile().tutorial.step == 4, "tutorial did not count real training")
+	end,
+}
+S.flow_tutorial_done = {
+	seed = freshSeed,
+	run = function(api)
+		local retention = api.state().sharedG.CoachAcademyRetention
+		api.click("CoachTutorial/Card/ActionButton")
+		api.wait(1)
+		api.open("Academy")
+		api.wait(1)
+		api.open("Academy") -- uzdaro
+		retention.track(api.player(), "train", 2)
+		retention.track(api.player(), "fightDone", 1)
+		retention.track(api.player(), "post", 1)
+		api.wait(0.5)
+		api.open("Goals")
+		api.wait(2)
+	end,
+	check = function(api)
+		local p = api.profile()
+		assert(p.tutorial.done == true, "tutorial not finished")
+		assert(p.pinigai == 500 + 250, "rookie bonus not paid: " .. tostring(p.pinigai))
 	end,
 }
 S.tournament_fresh = { seed = freshSeed, run = function(api) api.open("Tournament") end }
