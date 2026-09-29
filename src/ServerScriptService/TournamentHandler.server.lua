@@ -210,7 +210,7 @@ TournamentEnterRequest.OnServerEvent:Connect(function(player, studentIndex, tour
 
 	local message
 	if champion then
-		message = string.format("%s tapo %s cempionu! (+$%d, +%d reputacijos)", student.name, tournament.name, rewardMoney, rewardReputation)
+		message = string.format("%s tapo %s čempionu! (+$%d, +%d reputacijos)", student.name, tournament.name, rewardMoney, rewardReputation)
 	elseif roundsWon > 0 then
 		message = string.format("%s iskrito is %s po %d pergale(-iu). (+$%d, +%d reputacijos)", student.name, tournament.name, roundsWon, rewardMoney, rewardReputation)
 	else

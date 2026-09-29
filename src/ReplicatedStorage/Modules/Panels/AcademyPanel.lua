@@ -261,17 +261,28 @@ function AcademyPanel.create(Kit, State)
 			LayoutOrder = index,
 			Parent = statsCard,
 		})
-		Kit.label({
-			parent = row,
+		-- pavadinimas + MAX zyme vienoje eiluteje (zyme iskart po pavadinimo)
+		local nameRow = Kit.create("Frame", {
+			Name = "NameRow",
+			BackgroundTransparency = 1,
+			Size = UDim2.new(0, 108, 1, 0),
+			Parent = row,
+		})
+		Kit.list(nameRow, 6, Enum.FillDirection.Horizontal, Enum.HorizontalAlignment.Left, Enum.VerticalAlignment.Center)
+		local statName = Kit.label({
+			parent = nameRow,
+			order = 1,
 			name = "Name",
 			text = Kit.translate("stats", statId),
 			textSize = 13,
 			color = C.textSecondary,
-			size = UDim2.new(0, 104, 1, 0),
+			size = UDim2.new(0, 0, 1, 0),
+			autoSize = Enum.AutomaticSize.X,
 		})
+		statName.TextTruncate = Enum.TextTruncate.None
 		local bar = Kit.progressBar({
 			parent = row,
-			size = UDim2.new(1, -(112 + 72), 0, 8),
+			size = UDim2.new(1, -(112 + 56), 0, 8),
 			position = UDim2.new(0, 112, 0.5, 0),
 			anchor = Vector2.new(0, 0.5),
 		})
@@ -282,20 +293,19 @@ function AcademyPanel.create(Kit, State)
 			bold = true,
 			textSize = 13,
 			align = Enum.TextXAlignment.Right,
-			size = UDim2.new(0, 64, 1, 0),
+			size = UDim2.new(0, 48, 1, 0),
 			position = UDim2.new(1, 0, 0, 0),
 			anchor = Vector2.new(1, 0),
 		})
 		local maxBadge = Kit.badge({
-			parent = row,
+			parent = nameRow,
 			name = "MaxBadge",
 			text = "MAX",
 			color = C.gold,
 			solid = true,
 			height = 16,
 			textSize = 10,
-			anchor = Vector2.new(1, 0.5),
-			position = UDim2.new(1, -28, 0.5, 0),
+			order = 2,
 		})
 		maxBadge.Visible = false
 		statRows[statId] = { bar = bar, value = value, maxBadge = maxBadge }
@@ -331,7 +341,7 @@ function AcademyPanel.create(Kit, State)
 		})
 		local bar = Kit.progressBar({
 			parent = row,
-			size = UDim2.new(1, -(112 + 72), 0, 8),
+			size = UDim2.new(1, -(112 + 56), 0, 8),
 			position = UDim2.new(0, 112, 0.5, 0),
 			anchor = Vector2.new(0, 0.5),
 		})
@@ -342,7 +352,7 @@ function AcademyPanel.create(Kit, State)
 			bold = true,
 			textSize = 13,
 			align = Enum.TextXAlignment.Right,
-			size = UDim2.new(0, 64, 1, 0),
+			size = UDim2.new(0, 48, 1, 0),
 			position = UDim2.new(1, 0, 0, 0),
 			anchor = Vector2.new(1, 0),
 		})
@@ -712,7 +722,7 @@ function AcademyPanel.create(Kit, State)
 				child:Destroy()
 			end
 		end
-		Kit.badge({ parent = badgeRow, text = "◆ " .. Kit.translate("potential", student.potencialas), color = potentialColor, order = 1 })
+		Kit.potentialBadge({ parent = badgeRow, potential = student.potencialas, order = 1 })
 		if student.karjerosStadija == "Trial" then
 			Kit.badge({ parent = badgeRow, text = "Bandomasis", color = C.steelBright, order = 2 })
 		else
@@ -1385,10 +1395,11 @@ function AcademyPanel.create(Kit, State)
 	})
 
 	-- Forma (dešinėje)
+	local FOOTER_HEIGHT = 76
 	local formScroll = Kit.scroll({
 		parent = stylePage,
 		name = "Form",
-		size = UDim2.new(1, -356, 1, -16),
+		size = UDim2.new(1, -356, 1, -(16 + FOOTER_HEIGHT)),
 		position = UDim2.new(0, 336, 0, 0),
 		paddingRight = 10,
 		paddingTop = 2,
@@ -1541,12 +1552,29 @@ function AcademyPanel.create(Kit, State)
 		end)
 	end
 
+	-- "Sticky" apatine juosta: busena + Atsaukti / Issaugoti visada matomi
+	local formFooter = Kit.create("Frame", {
+		Name = "FormFooter",
+		BackgroundColor3 = C.bg,
+		AnchorPoint = Vector2.new(0, 1),
+		Size = UDim2.new(1, -356, 0, FOOTER_HEIGHT),
+		Position = UDim2.new(0, 336, 1, -16),
+		Parent = stylePage,
+	})
+	Kit.create("Frame", {
+		Name = "Divider",
+		BackgroundColor3 = C.border,
+		BackgroundTransparency = 0.2,
+		Size = UDim2.new(1, 0, 0, 1),
+		Parent = formFooter,
+	})
 	local actionRow = Kit.create("Frame", {
 		Name = "Actions",
 		BackgroundTransparency = 1,
+		AnchorPoint = Vector2.new(0, 1),
 		Size = UDim2.new(1, 0, 0, 40),
-		LayoutOrder = 10,
-		Parent = formScroll,
+		Position = UDim2.new(0, 0, 1, 0),
+		Parent = formFooter,
 	})
 	local resetButton = Kit.button({
 		parent = actionRow,
@@ -1569,12 +1597,13 @@ function AcademyPanel.create(Kit, State)
 		enabled = false,
 	})
 	local dirtyHint = Kit.label({
-		parent = formScroll,
+		parent = formFooter,
 		name = "DirtyHint",
 		text = "",
 		textSize = 12,
 		color = C.textSecondary,
-		order = 9,
+		size = UDim2.new(1, 0, 0, 20),
+		position = UDim2.new(0, 0, 0, 8),
 	})
 
 	local function isDirty()
@@ -1761,11 +1790,15 @@ function AcademyPanel.create(Kit, State)
 		if narrow then
 			previewColumn.Visible = false
 			formScroll.Position = UDim2.new(0, 20, 0, 0)
-			formScroll.Size = UDim2.new(1, -40, 1, -16)
+			formScroll.Size = UDim2.new(1, -40, 1, -(16 + FOOTER_HEIGHT))
+			formFooter.Position = UDim2.new(0, 20, 1, -16)
+			formFooter.Size = UDim2.new(1, -40, 0, FOOTER_HEIGHT)
 		else
 			previewColumn.Visible = true
 			formScroll.Position = UDim2.new(0, 336, 0, 0)
-			formScroll.Size = UDim2.new(1, -356, 1, -16)
+			formScroll.Size = UDim2.new(1, -356, 1, -(16 + FOOTER_HEIGHT))
+			formFooter.Position = UDim2.new(0, 336, 1, -16)
+			formFooter.Size = UDim2.new(1, -356, 0, FOOTER_HEIGHT)
 		end
 	end)
 

@@ -11,9 +11,33 @@ local SponsorConfig = require(Modules:WaitForChild("SponsorConfig"))
 
 local SponsorPanel = {}
 
--- Remejo "logotipas": inicialai + prekes zenklo spalva (is SponsorConfig)
+-- Prekes zenklo spalva (is SponsorConfig) pritraukiama prie artimiausio paletes tono,
+-- kad atsitiktines config spalvos (zalia, violetine...) nelauztu HUD paletes.
+local function paletteTone(C, color)
+	local tones = {
+		{ top = C.steelBright, bottom = C.steel, text = C.textPrimary },
+		{ top = C.crimsonBright, bottom = C.crimson, text = C.textPrimary },
+		{ top = C.goldBright, bottom = C.gold, text = C.textOnGold },
+		{ top = C.bgCardLight, bottom = C.bgCard, text = C.gold },
+	}
+	if not color then
+		return tones[1]
+	end
+	local best, bestDistance = tones[1], math.huge
+	for _, tone in ipairs(tones) do
+		local base = tone.bottom
+		local distance = (color.R - base.R) ^ 2 + (color.G - base.G) ^ 2 + (color.B - base.B) ^ 2
+		if distance < bestDistance then
+			best, bestDistance = tone, distance
+		end
+	end
+	return best
+end
+
+-- Remejo "logotipas": inicialai paletes tone
 local function monogram(Kit, parent, sponsor, size, position)
 	local C = Kit.Colors
+	local tone = paletteTone(C, sponsor.color)
 	local tile = Kit.create("Frame", {
 		Name = "Monogram",
 		BackgroundColor3 = Color3.new(1, 1, 1),
@@ -23,16 +47,15 @@ local function monogram(Kit, parent, sponsor, size, position)
 		Parent = parent,
 	})
 	Kit.corner(tile, 12)
-	Kit.stroke(tile, C.border, 1, 0.2)
-	local base = sponsor.color or C.steel
-	Kit.gradient(tile, base, base:Lerp(Color3.new(0, 0, 0), 0.45), 135)
+	Kit.stroke(tile, tone.top, 1, 0.35)
+	Kit.gradient(tile, tone.top, tone.bottom, 135)
 	Kit.label({
 		parent = tile,
 		name = "Initials",
 		text = Kit.initials(Kit.displayName(sponsor.name)),
 		bold = true,
 		textSize = math.floor(size * 0.36),
-		color = C.textPrimary,
+		color = tone.text,
 		align = Enum.TextXAlignment.Center,
 		size = UDim2.new(1, 0, 1, 0),
 	})
@@ -171,6 +194,49 @@ function SponsorPanel.create(Kit, State)
 	offersHolder.Size = UDim2.new(1, 0, 0, 0)
 	local offersGrid = Kit.grid(offersHolder, UDim2.new(0.5, -7, 0, 150), UDim2.new(0, 12, 0, 12))
 
+	-- Kai pasiulymu nera: pilno plocio kortele su paieskos mygtuku vietoje (ne tinklelio langelyje)
+	local offersEmpty = Kit.card({
+		parent = scroll,
+		name = "OffersEmpty",
+		size = UDim2.new(1, 0, 0, 72),
+		color = C.bgCard,
+		gradient = false,
+		transparency = 0.4,
+		order = 5,
+	})
+	Kit.label({
+		parent = offersEmpty,
+		name = "Title",
+		text = "Naujų pasiūlymų nėra",
+		bold = true,
+		textSize = 14,
+		size = UDim2.new(1, -250, 0, 18),
+		position = UDim2.new(0, 18, 0, 17),
+	})
+	local offersEmptySub = Kit.label({
+		parent = offersEmpty,
+		name = "Sub",
+		text = "",
+		textSize = 12,
+		color = C.textSecondary,
+		size = UDim2.new(1, -250, 0, 16),
+		position = UDim2.new(0, 18, 0, 39),
+	})
+	local offersEmptyButton = Kit.button({
+		parent = offersEmpty,
+		name = "SearchButton",
+		text = "Ieškoti rėmėjų",
+		icon = "📨",
+		variant = "steel",
+		size = UDim2.new(0, 210, 0, 40),
+		position = UDim2.new(1, -16, 0.5, 0),
+		anchor = Vector2.new(1, 0.5),
+		textSize = 13,
+		onClick = function()
+			State.fire("SponsorRefreshRequest")
+		end,
+	})
+
 	Kit.sectionHeader({ parent = scroll, title = "Didesni rėmėjai", hint = "Atsirakina kylant reputacijai", order = 6, accent = C.steelBright })
 	local lockedHolder = Kit.card({
 		parent = scroll,
@@ -186,7 +252,7 @@ function SponsorPanel.create(Kit, State)
 	-- ATVAIZDAVIMAS
 	-- ========================================================
 	local dynamic = {}
-	local activeTimers = {} -- { entry, button, bar, caption, expires }
+	local activeTimers = {} -- { entry, button, bar, caption, stroke }
 
 	local function clearDynamic()
 		for _, inst in ipairs(dynamic) do
@@ -204,13 +270,20 @@ function SponsorPanel.create(Kit, State)
 			local income = sponsor and sponsor.incomePerCycle or 0
 			local untilCollect = (entry.nextCollectAt or 0) - now
 			local untilExpire = (entry.expiresAt or 0) - now
+			local ready = untilExpire > 0 and untilCollect <= 0
+			-- Paruostos pajamos: kortele paryskinama auksu, kad isskirtu is laukianciu
+			timer.stroke.Color = ready and C.gold or C.border
+			timer.stroke.Transparency = ready and 0.45 or 0.45
+			timer.stroke.Thickness = ready and 1.5 or 1
+			timer.caption.TextColor3 = ready and C.goldBright or C.textSecondary
+			timer.caption.Font = ready and Enum.Font.GothamBold or Enum.Font.Gotham
 			if untilExpire <= 0 then
 				timer.button.SetEnabled(true)
 				timer.button.SetVariant("ghost")
 				timer.button.SetText("Sutartis baigėsi — uždaryti")
 				timer.bar.Set(1)
 				timer.caption.Text = "Sutartis baigėsi"
-			elseif untilCollect <= 0 then
+			elseif ready then
 				timer.button.SetEnabled(true)
 				timer.button.SetVariant("gold")
 				timer.button.SetText("Surinkti  •  " .. Kit.formatMoney(income))
@@ -228,18 +301,27 @@ function SponsorPanel.create(Kit, State)
 		local s = State.get()
 		local remaining = (s.sponsor.lastRefresh or 0) + SponsorConfig.RefreshCooldown - now
 		local full = #(s.sponsor.sponsors or {}) >= SponsorConfig.MaxActiveSponsors
+		for _, button in ipairs({ refreshButton, offersEmptyButton }) do
+			if full then
+				button.SetEnabled(false)
+				button.SetText("Sutarčių limitas")
+			elseif remaining > 0 then
+				button.SetEnabled(false)
+				button.SetText("Po " .. Kit.formatDuration(remaining))
+			else
+				button.SetEnabled(true)
+				button.SetText("Ieškoti rėmėjų")
+			end
+		end
 		if full then
-			refreshButton.SetEnabled(false)
-			refreshButton.SetText("Sutarčių limitas")
 			refreshCaption.Text = string.format("Daugiausia %d aktyvios sutartys", SponsorConfig.MaxActiveSponsors)
+			offersEmptySub.Text = "Pasiekei sutarčių limitą — surink pajamas ir lauk, kol sutartis baigsis."
 		elseif remaining > 0 then
-			refreshButton.SetEnabled(false)
-			refreshButton.SetText("Laukiama atsakymų")
 			refreshCaption.Text = "Nauji pasiūlymai po " .. Kit.formatDuration(remaining)
+			offersEmptySub.Text = "Rėmėjai svarsto — nauji pasiūlymai netrukus."
 		else
-			refreshButton.SetEnabled(true)
-			refreshButton.SetText("Ieškoti rėmėjų")
 			refreshCaption.Text = "Galima ieškoti naujų rėmėjų"
+			offersEmptySub.Text = "Pasirašymo bonusas iškart papildys biudžetą."
 		end
 	end
 
@@ -283,7 +365,7 @@ function SponsorPanel.create(Kit, State)
 			Kit.label({
 				parent = empty,
 				name = "Text",
-				text = "📭  Dar neturi rėmėjų. Ieškok pasiūlymų — pasirašymo bonusas iškart papildys biudžetą.",
+				text = "📭  Dar neturi rėmėjų — pasirašyk sutartį iš pasiūlymų žemiau.",
 				textSize = 12,
 				color = C.textSecondary,
 				wrap = true,
@@ -295,7 +377,7 @@ function SponsorPanel.create(Kit, State)
 		for position, entry in ipairs(sponsors) do
 			local sponsor = SponsorConfig.Sponsors[entry.configIndex]
 			if sponsor then
-				local cardFrame = Kit.card({
+				local cardFrame, cardStroke = Kit.card({
 					parent = activeHolder,
 					name = "Contract" .. position,
 					size = UDim2.new(1, 0, 0, 88),
@@ -349,34 +431,17 @@ function SponsorPanel.create(Kit, State)
 						State.fire("SponsorCollectRequest", position)
 					end,
 				})
-				table.insert(activeTimers, { entry = entry, button = collectButton, bar = bar, caption = caption })
+				table.insert(activeTimers, { entry = entry, button = collectButton, bar = bar, caption = caption, stroke = cardStroke })
 				table.insert(dynamic, cardFrame)
 			end
 		end
 
 		-- Pasiulymai
-		if #offers == 0 then
-			local empty = Kit.card({
-				parent = offersHolder,
-				name = "Empty",
-				color = C.bgCard,
-				gradient = false,
-				transparency = 0.4,
-				order = 1,
-			})
-			Kit.label({
-				parent = empty,
-				name = "Text",
-				text = "Naujų pasiūlymų nėra.\nPaspausk „Ieškoti rėmėjų“.",
-				textSize = 12,
-				color = C.textSecondary,
-				wrap = true,
-				align = Enum.TextXAlignment.Center,
-				size = UDim2.new(1, -24, 1, 0),
-				position = UDim2.new(0, 12, 0, 0),
-			})
-			table.insert(dynamic, empty)
-		end
+		offersEmpty.Visible = #offers == 0
+		offersHolder.Visible = #offers > 0
+		-- Be pasiulymu paieskos mygtukas rodomas tuscioje korteleje -- suvestineje jo nekartojame
+		refreshButton.Instance.Visible = #offers > 0
+		refreshCaption.Visible = #offers > 0
 		for position, configIndex in ipairs(offers) do
 			local sponsor = SponsorConfig.Sponsors[configIndex]
 			if sponsor then
@@ -402,7 +467,8 @@ function SponsorPanel.create(Kit, State)
 				Kit.label({
 					parent = cardFrame,
 					name = "Duration",
-					text = string.format("Trukmė %d min  •  %s", math.floor(sponsor.durationSeconds / 60), Kit.stars(sponsor.minStars)),
+					text = string.format("Trukmė %d min  •  Prestižas %s", math.floor(sponsor.durationSeconds / 60), Kit.starsRich(sponsor.minStars)),
+					rich = true,
 					textSize = 12,
 					color = C.textSecondary,
 					size = UDim2.new(1, -80, 0, 14),
@@ -472,18 +538,19 @@ function SponsorPanel.create(Kit, State)
 					text = string.format("Bonusas %s  •  %s / %d min", Kit.formatMoney(sponsor.signingBonus), Kit.formatMoney(sponsor.incomePerCycle), math.floor(SponsorConfig.CollectCycleSeconds / 60)),
 					textSize = 12,
 					color = C.textSecondary,
-					size = UDim2.new(0.5, -120, 1, 0),
-					position = UDim2.new(0.5, 0, 0, 0),
+					size = UDim2.new(0.5, -150, 1, 0),
+					position = UDim2.new(0.5, -20, 0, 0),
 				})
 				Kit.label({
 					parent = row,
 					name = "Stars",
-					text = "🔒 " .. Kit.stars(sponsor.minStars),
+					text = "🔒 Reikia " .. Kit.starsRich(sponsor.minStars),
+					rich = true,
 					bold = true,
 					textSize = 12,
-					color = C.gold,
+					color = C.textSecondary,
 					align = Enum.TextXAlignment.Right,
-					size = UDim2.new(0, 110, 1, 0),
+					size = UDim2.new(0, 140, 1, 0),
 					position = UDim2.new(1, 0, 0, 0),
 					anchor = Vector2.new(1, 0),
 				})

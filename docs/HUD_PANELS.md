@@ -7,9 +7,9 @@
 | `Profile` | `ProfilePanel` | Trenerio profilis: reputacijos lygis ir žvaigždės su progresu, 8 statistikos plytelės (kovotojai, pergalės, pergalių %, turnyrų titulai, balansas, pelnas, sekėjai, rėmėjai), karjeros kelias (Vietinės kovos → Regionas → WBF kontraktas → Reitingai → Pasaulio titulas), trofėjų lentyna |
 | `Academy` | `AcademyPanel` | **Kovotojai:** sąrašas ir kortelė (statistika su genetinėmis lubomis/MAX, nuovargis, nuotaika + „Padrąsinti“, trauma + „Poilsio kambarys“, bandomasis laikotarpis, kovos stiliaus keitimas su stiprybėmis/silpnybėmis). **Įranga:** pirkimas. **Išvaizda:** pavadinimas, sienos, grindys, logotipas su gyva peržiūra |
 | `Phone` | `PhonePanel` | Telefonas su „SocialGym“ programėle: įrašų skelbimas su cooldown'ais, veiklos srautas, reach iki kito walk-in kliento, bandomieji klientai, kiekvieno kovotojo atskira paskyra |
-| `Staff` | `StaffPanel` | 5 darbuotojų tipai (Asistentas treneris, Jėgos treneris, Fizioterapeutas, Skautas, Mitybos specialistas), kiekvienas su % bonusu; samdymas/atleidimas (su patvirtinimu), atlyginimų suvestinė |
-| `Scout` | `ScoutPanel` | Talentų paieška (skautas), kandidatai su potencialu, **Scout Report** pirkimas (atskleidžia genetines lubas), samdymas; varžovų žvalgyba pagal karjeros lygį + stilių ratas |
-| `Sponsor` | `SponsorPanel` | Aktyvios sutartys (pajamų rinkimas su laikmačiu), pasiūlymai su visa verte, didesni rėmėjai pagal žvaigždes |
+| `Staff` | `StaffPanel` | 5 darbuotojų tipai (Asistentas treneris, Jėgos treneris, Fizioterapeutas, Skautas, Mitybos specialistas), kiekvienas su % bonusu; samdymas/atleidimas (su patvirtinimu), atlyginimų suvestinė ir kiek laiko biudžeto užteks algoms |
+| `Scout` | `ScoutPanel` | Talentų paieška (skautas), kandidatai su potencialu, **skauto ataskaitos** pirkimas (atskleidžia genetines lubas), samdymas; varžovų žvalgyba pagal karjeros lygį (su tavo geriausio to lygio kovotojo OVR žyme) + stilių ratas |
+| `Sponsor` | `SponsorPanel` | Aktyvios sutartys (pajamų rinkimas su laikmačiu, paruoštos pajamos paryškinamos), pasiūlymai su visa verte ir prestižu, didesni rėmėjai pagal žvaigždes |
 | `Tournament` | `TournamentPanel` | Turnyrai: kovotojo pasirinkimas, fight camp patikra (pasiruošimas, sveikata, nuovargis, laimėjimo tikimybė pagal tikrą kovos formulę), registracija, rezultatas. Karjeros laiptai: kiekvieno kovotojo progresas ir „Kovoti“ |
 
 ## Failai
@@ -57,9 +57,9 @@ lune run tools/build_place.luau CoachAcademy_active2_checkpoint.rbxl CoachAcadem
   - Trumpinama simboliais, ne baitais. Anksčiau lietuviška raidė galėjo būti perkirpta pusiau, ir DataStore tokio (netinkamo UTF-8) profilio nebeišsaugodavo.
   - Pavadinimas filtruojamas per `TextService`, nes jis matomas visiems ant iškabos.
   - NaN/inf indeksai atmetami.
-- **TournamentHandler:** laimėjus turnyrą `profile.trophies[pavadinimas] += 1` (trofėjų lentyna).
+- **TournamentHandler:** laimėjus turnyrą `profile.trophies[pavadinimas] += 1` (trofėjų lentyna); „čempionu“ su diakritika.
 - **StaffConfig:** samdymo sąraše 5 koncepcijos tipai. Nauji: Asistentas treneris (+10% visoms treniruotėms), Skautas (−30% paieškos kaina, perpus trumpesnis laukimas), Mitybos specialistas (−25% nuovargio). `SpeedCoach` / `MentalCoach` lieka `Roles` (esami save'ai), tik nebesamdomi.
-- **TrainingHandler:** Mitybos specialisto nuovargio daugiklis. **ScoutHandler:** Skauto nuolaida, `ScoutReportRequest` (Scout Report, $40), genetinės lubos klientui siunčiamos tik nupirkus ataskaitą.
+- **TrainingHandler:** Mitybos specialisto nuovargio daugiklis. **ScoutHandler:** Skauto nuolaida, `ScoutReportRequest` (skauto ataskaita, $40), genetinės lubos klientui siunčiamos tik nupirkus ataskaitą.
 - **MainHUDController:**
   - `UIGradient` daugina spalvas iš `BackgroundColor3`, todėl StatusPanel ir NavDock buvo beveik juodi. Dabar fonas baltas ir matomi tikri `bgCardLight → bgCard`.
   - Phone FAB šešėlis dabar apvalus.
@@ -72,7 +72,7 @@ lune run tools/build_place.luau CoachAcademy_active2_checkpoint.rbxl CoachAcadem
 - RemoteEvent'ai veikia su tinklo kopijavimu ir eilėmis;
 - `task` planuoklis naudoja virtualų laiką.
 
-Scenarijai (`scenarios.luau`) paspaudžia mygtukus ir tikrina serverio būseną, pvz., „nupirkta įranga, nuskaičiuoti pinigai“. `shoot.js` suskaičiuoja Roblox išdėstymą (UIListLayout, UIGridLayout, AutomaticSize, ScrollingFrame, UIStroke, UIGradient, CanvasGroup) ir daro ekrano nuotraukas. Taip pat randa teksto perpildymą.
+Scenarijai (`scenarios.luau`) paspaudžia mygtukus ir tikrina serverio būseną, pvz., „nupirkta įranga, nuskaičiuoti pinigai“. Kaip ir Roblox, paspausti galima tik matomą mygtuką (jei jis ar jo tėvas `Visible = false`, scenarijus krenta). `shoot.js` suskaičiuoja Roblox išdėstymą (UIListLayout, UIGridLayout, AutomaticSize, ScrollingFrame, UIStroke, UIGradient, CanvasGroup) ir daro ekrano nuotraukas. Taip pat randa teksto perpildymą.
 
 ```
 cd tools/ui-preview
@@ -98,3 +98,9 @@ Ko mock'as **negali** patikrinti: tikro įvesties hit-testing, našumo mobiliuos
    - `Active` paviršius, kad paspaudimai neprakristų ir neuždarytų panelės;
    - CanvasGroup pakeistas paprastu Frame;
    - UTF-8 pavadinimų taisymas.
+4. **Antras Art Director ratas:**
+   - prilipę veiksmų mygtukai apačioje (Akademijos išvaizda, Turnyrai), kad pagrindinis veiksmas visada matomas;
+   - siaurame ekrane sąrašas → detalės su „atgal“ mygtuku;
+   - neaktyvus mygtukas atrodo kaip būsena (pvz. „⏱ Palauk 0:15“), o ne kaip sugedęs mygtukas;
+   - vienodos potencialo žymės, žvaigždės ir lietuviški pavadinimai visose panelėse;
+   - rėmėjų logotipų spalvos pritrauktos prie paletės.

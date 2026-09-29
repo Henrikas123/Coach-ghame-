@@ -97,7 +97,9 @@ function TournamentPanel.create(Kit, State)
 	local selectedTournament = nil
 	local selectedFighterKey = nil
 	local narrow = false
-	local paintList, renderTournaments -- forward (apibreztos zemiau)
+	local showingDetailOnNarrow = false
+	local paintList, renderTournaments, applyNarrow -- forward (apibreztos zemiau)
+	local FOOTER_HEIGHT = 60
 
 	-- ============================================================
 	-- 1. TURNYRAI
@@ -125,7 +127,7 @@ function TournamentPanel.create(Kit, State)
 	local detail = Kit.scroll({
 		parent = tournamentsPage,
 		name = "Detail",
-		size = UDim2.new(1, -312, 1, -16),
+		size = UDim2.new(1, -312, 1, -(16 + FOOTER_HEIGHT)),
 		position = UDim2.new(0, 296, 0, 0),
 		paddingRight = 10,
 		paddingTop = 2,
@@ -134,6 +136,40 @@ function TournamentPanel.create(Kit, State)
 		spacing = 12,
 	})
 	Kit.scrollFade(detail)
+
+	-- "Sticky" apatine juosta su pagrindiniu veiksmu (Registruotis) -- visada matoma
+	local detailFooter = Kit.create("Frame", {
+		Name = "DetailFooter",
+		BackgroundColor3 = C.bg,
+		AnchorPoint = Vector2.new(0, 1),
+		Size = UDim2.new(1, -312, 0, FOOTER_HEIGHT),
+		Position = UDim2.new(0, 296, 1, -16),
+		Parent = tournamentsPage,
+	})
+	Kit.create("Frame", {
+		Name = "Divider",
+		BackgroundColor3 = C.border,
+		BackgroundTransparency = 0.2,
+		Size = UDim2.new(1, 0, 0, 1),
+		Parent = detailFooter,
+	})
+
+	-- Siaurame ekrane: sarasas -> detales (su grizimo mygtuku)
+	local backButton = Kit.button({
+		parent = tournamentsPage,
+		name = "BackButton",
+		text = "Visi turnyrai",
+		icon = "←",
+		variant = "ghost",
+		size = UDim2.new(0, 170, 0, 32),
+		position = UDim2.new(0, 20, 0, 0),
+		textSize = 13,
+		onClick = function()
+			showingDetailOnNarrow = false
+			applyNarrow()
+		end,
+	})
+	backButton.Instance.Visible = false
 
 	-- Turnyru sarasas
 	local tournamentRows = {}
@@ -151,7 +187,7 @@ function TournamentPanel.create(Kit, State)
 		local rowStroke = Kit.stroke(row, C.border, 1, 0.5)
 		local accent = Kit.create("Frame", {
 			Name = "SelectedAccent",
-			BackgroundColor3 = C.crimsonBright,
+			BackgroundColor3 = C.gold,
 			Size = UDim2.new(0, 3, 0, 30),
 			Position = UDim2.new(0, 0, 0.5, 0),
 			AnchorPoint = Vector2.new(0, 0.5),
@@ -181,7 +217,8 @@ function TournamentPanel.create(Kit, State)
 		local sub = Kit.label({
 			parent = row,
 			name = "Sub",
-			text = string.format("%s  •  %s", Kit.stars(tournament.minStars), Kit.formatMoney(tournament.entryFee)),
+			text = "",
+			rich = true,
 			textSize = 12,
 			color = C.textSecondary,
 			size = UDim2.new(1, -70, 0, 14),
@@ -201,12 +238,21 @@ function TournamentPanel.create(Kit, State)
 		end)
 		row.Activated:Connect(function()
 			selectedTournament = index
+			showingDetailOnNarrow = true
 			renderTournaments()
+			applyNarrow()
 		end)
 	end
 
 	-- --- Detalės: antraštė ---
-	local headerCard, headerStroke = Kit.card({ parent = detail, name = "HeaderCard", size = UDim2.new(1, 0, 0, 118), order = 1 })
+	local headerCard, headerStroke = Kit.card({
+		parent = detail,
+		name = "HeaderCard",
+		size = UDim2.new(1, 0, 0, 104),
+		autoSize = Enum.AutomaticSize.Y,
+		order = 1,
+	})
+	Kit.padding(headerCard, 0, 0, 16, 0)
 	local headerIcon = Kit.create("Frame", {
 		Name = "IconTile",
 		BackgroundColor3 = Color3.new(1, 1, 1),
@@ -240,14 +286,18 @@ function TournamentPanel.create(Kit, State)
 		text = "",
 		textSize = 12,
 		color = C.textSecondary,
-		size = UDim2.new(1, -110, 0, 16),
-		position = UDim2.new(0, 90, 0, 44),
+		rich = true,
+		wrap = true, -- ilgesnis (uzrakinto turnyro) tekstas lusta i 2 eilutes, o ne nukerpamas
+		alignY = Enum.TextYAlignment.Top,
+		size = UDim2.new(1, -106, 0, 32),
+		position = UDim2.new(0, 90, 0, 45),
 	})
 	local rewardRow = Kit.create("Frame", {
 		Name = "Rewards",
 		BackgroundTransparency = 1,
-		Size = UDim2.new(1, -32, 0, 22),
-		Position = UDim2.new(0, 16, 0, 84),
+		Size = UDim2.new(1, -32, 0, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
+		Position = UDim2.new(0, 16, 0, 88),
 		Parent = headerCard,
 	})
 	Kit.list(rewardRow, 6, Enum.FillDirection.Horizontal, Enum.HorizontalAlignment.Left, Enum.VerticalAlignment.Center)
@@ -258,7 +308,7 @@ function TournamentPanel.create(Kit, State)
 		name = "FighterPicker",
 		size = UDim2.new(1, 0, 0, 0),
 		autoSize = Enum.AutomaticSize.Y,
-		order = 2,
+		order = 3,
 	})
 	Kit.padding(pickerCard, 14, 16, 16, 16)
 	Kit.list(pickerCard, 10)
@@ -271,7 +321,8 @@ function TournamentPanel.create(Kit, State)
 		LayoutOrder = 1,
 		Parent = pickerCard,
 	})
-	Kit.grid(chipGrid, UDim2.new(0.5, -5, 0, 48), UDim2.new(0, 8, 0, 8))
+	local chipLayout = Kit.grid(chipGrid, UDim2.new(0.5, -5, 0, 48), UDim2.new(0, 8, 0, 8))
+	chipLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
 
 	-- --- Detalės: fight camp ---
 	local campCard = Kit.card({
@@ -279,11 +330,53 @@ function TournamentPanel.create(Kit, State)
 		name = "FightCamp",
 		size = UDim2.new(1, 0, 0, 0),
 		autoSize = Enum.AutomaticSize.Y,
-		order = 3,
+		order = 4,
 	})
 	Kit.padding(campCard, 14, 16, 16, 16)
 	Kit.list(campCard, 8)
-	Kit.sectionHeader({ parent = campCard, title = "Pasiruošimas kovai", hint = "Fight camp", accent = C.crimsonBright, order = 0 })
+	Kit.sectionHeader({ parent = campCard, title = "Pasiruošimas kovai", accent = C.crimsonBright, order = 0 })
+	-- Kai nera ne vieno paruosto kovotojo: kvietimas treniruoti vietoj patikros saraso
+	local noFighterCallout = Kit.create("Frame", {
+		Name = "NoFighterCallout",
+		BackgroundColor3 = C.steel,
+		BackgroundTransparency = 0.85,
+		Size = UDim2.new(1, 0, 0, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
+		LayoutOrder = 10,
+		Visible = false,
+		Parent = campCard,
+	})
+	Kit.corner(noFighterCallout, 10)
+	Kit.stroke(noFighterCallout, C.steelBright, 1, 0.4)
+	Kit.padding(noFighterCallout, 12, 12, 12, 12)
+	Kit.list(noFighterCallout, 10)
+	Kit.label({
+		parent = noFighterCallout,
+		name = "Text",
+		text = string.format(
+			"Nėra paruoštų kovotojų — vidutinė statistika turi būti ≥ %d. Treniruok narius akademijoje.",
+			TrainingConfig.Trial.competitionReadyStatThreshold
+		),
+		textSize = 12,
+		wrap = true,
+		size = UDim2.new(1, 0, 0, 0),
+		autoSize = Enum.AutomaticSize.Y,
+		order = 1,
+	})
+	Kit.button({
+		parent = noFighterCallout,
+		name = "GoTrain",
+		text = "Treniruoti akademijoje",
+		icon = "🏋️",
+		variant = "steel",
+		size = UDim2.new(1, 0, 0, 34),
+		order = 2,
+		textSize = 13,
+		onClick = function()
+			Kit.close("Tournament")
+			Kit.open("Academy")
+		end,
+	})
 	local checkRows = {}
 	for index, key in ipairs({ "ready", "health", "fatigue", "odds" }) do
 		local row = Kit.create("Frame", {
@@ -335,13 +428,14 @@ function TournamentPanel.create(Kit, State)
 	})
 
 	local enterButton = Kit.button({
-		parent = detail,
+		parent = detailFooter,
 		name = "EnterButton",
 		text = "Registruotis",
 		icon = "🥊",
 		variant = "crimson",
 		size = UDim2.new(1, 0, 0, 44),
-		order = 4,
+		position = UDim2.new(0, 0, 1, 0),
+		anchor = Vector2.new(0, 1),
 		textSize = 15,
 	})
 
@@ -351,7 +445,7 @@ function TournamentPanel.create(Kit, State)
 		name = "LastResult",
 		size = UDim2.new(1, 0, 0, 0),
 		autoSize = Enum.AutomaticSize.Y,
-		order = 5,
+		order = 2,
 	})
 	Kit.padding(resultCard, 14, 16, 16, 16)
 	Kit.list(resultCard, 8)
@@ -414,11 +508,11 @@ function TournamentPanel.create(Kit, State)
 			local selected = index == selectedTournament
 			entry.accent.Visible = selected
 			entry.row.BackgroundColor3 = (selected or entry.hover) and C.bgCardLight or C.bgCard
-			entry.stroke.Color = selected and C.crimsonBright or (entry.hover and C.gold or C.border)
-			entry.stroke.Transparency = selected and 0.15 or (entry.hover and 0.45 or 0.5)
+			entry.stroke.Color = (selected or entry.hover) and C.gold or C.border
+			entry.stroke.Transparency = selected and 0.25 or (entry.hover and 0.45 or 0.5)
 			entry.cup.TextTransparency = locked and 0.6 or 0
 			entry.name.TextColor3 = locked and C.textSecondary or C.textPrimary
-			entry.sub.Text = string.format("%s%s  •  %s", locked and "🔒 " or "", Kit.stars(tournament.minStars), Kit.formatMoney(tournament.entryFee))
+			entry.sub.Text = string.format("%s%s  •  %s", locked and "🔒 " or "", Kit.starsRich(tournament.minStars), Kit.formatMoney(tournament.entryFee))
 		end
 	end
 
@@ -521,9 +615,17 @@ function TournamentPanel.create(Kit, State)
 		local stars = s.reputation.stars or 1
 		local money = s.money or 0
 		local cooldownLeft = (s.tournament.lastTournamentAt or 0) + (TournamentConfig.EntryCooldown or 0) - State.now()
+		local anyEligible = false
+		for _, item in ipairs(members()) do
+			if isEligible(item.student) then
+				anyEligible = true
+			end
+		end
 		local reason = nil
 		if stars < tournament.minStars then
 			reason = "Reikia " .. Kit.stars(tournament.minStars) .. " reputacijos"
+		elseif not anyEligible then
+			reason = "Nėra paruoštų kovotojų"
 		elseif not student then
 			reason = "Pasirink kovotoją"
 		elseif not isEligible(student) then
@@ -545,13 +647,25 @@ function TournamentPanel.create(Kit, State)
 			return
 		end
 		if not student then
-			setCheck("ready", false, "Pasirink kovotoją aukščiau", "", true)
+			local anyEligible = false
+			for _, item in ipairs(members()) do
+				if isEligible(item.student) then
+					anyEligible = true
+				end
+			end
+			noFighterCallout.Visible = not anyEligible
+			checkRows.ready.row.Visible = anyEligible
+			if anyEligible then
+				setCheck("ready", false, "Pasirink kovotoją aukščiau", "", true)
+			end
 			checkRows.health.row.Visible = false
 			checkRows.fatigue.row.Visible = false
 			checkRows.odds.row.Visible = false
 			oddsBar.Instance.Visible = false
 			return
 		end
+		noFighterCallout.Visible = false
+		checkRows.ready.row.Visible = true
 		checkRows.health.row.Visible = true
 		checkRows.fatigue.row.Visible = true
 		checkRows.odds.row.Visible = true
@@ -570,9 +684,14 @@ function TournamentPanel.create(Kit, State)
 			student.injured and string.format("Trauma ~%d min", math.ceil((student.injuryRecoverySeconds or 0) / 60)) or "Sveikas")
 		local fatigue = student.fatigue or 0
 		local fatiguePenalty = math.clamp(fatigue / 100, 0, 0.5)
-		setCheck("fatigue", fatigue < 40,
+		-- nuovargis silpnina >= 20% -> "!" (ispejimas), kitaip gerai
+		local fatigueOk = fatiguePenalty < 0.2
+		setCheck("fatigue", fatigueOk,
 			string.format("Nuovargis <font color=\"#A8A096\">(silpnina %d%%)</font>", math.floor(fatiguePenalty * 100 + 0.5)),
-			string.format("%d%%", fatigue), fatigue < TrainingConfig.FatigueTrainingBlockThreshold)
+			string.format("%d%%", fatigue), false)
+		if not fatigueOk then
+			checkRows.fatigue.icon.Text = "!"
+		end
 
 		local tier = tournamentTier(tournament)
 		local fighterScore = weightedBase(student.stats) * (1 - fatiguePenalty)
@@ -600,11 +719,17 @@ function TournamentPanel.create(Kit, State)
 		end
 	end
 
+	local shownResult = nil
 	local function renderResult()
 		local result = State.get().tournament.lastResult
 		resultCard.Visible = result ~= nil
 		if not result then
 			return
+		end
+		if result ~= shownResult then
+			-- naujas rezultatas: parodom ji (kortele yra iskart po antraste)
+			shownResult = result
+			detail.CanvasPosition = Vector2.new(0, 0)
 		end
 		for _, child in ipairs(resultRounds:GetChildren()) do
 			if child:IsA("GuiObject") then
@@ -688,8 +813,9 @@ function TournamentPanel.create(Kit, State)
 		local locked = stars < tournament.minStars
 		headerName.Text = Kit.displayName(tournament.name)
 		headerSub.Text = string.format(
-			"%s  •  %d raundai  •  Varžovai: %s (%d–%d)",
-			Kit.stars(tournament.minStars), tournament.rounds,
+			"%s%s  •  %d raundai  •  Varžovai: %s (%d–%d)",
+			locked and "<font color=\"#D63E4C\"><b>🔒 Reikia</b></font> " or "",
+			Kit.starsRich(tournament.minStars), tournament.rounds,
 			Kit.translate("ladder", tier.name), tier.opponentStatMin, tier.opponentStatMax
 		)
 		headerIconGradient.Color = ColorSequence.new({
@@ -697,8 +823,8 @@ function TournamentPanel.create(Kit, State)
 			ColorSequenceKeypoint.new(1, locked and C.bgCard or C.crimson),
 		})
 		headerIconStroke.Color = locked and C.border or C.crimsonBright
-		headerStroke.Color = locked and C.border or C.crimsonBright
-		headerStroke.Transparency = locked and 0.45 or 0.55
+		headerStroke.Color = C.border
+		headerStroke.Transparency = 0.45
 		for _, child in ipairs(rewardRow:GetChildren()) do
 			if child:IsA("GuiObject") then
 				child:Destroy()
@@ -707,9 +833,6 @@ function TournamentPanel.create(Kit, State)
 		Kit.badge({ parent = rewardRow, text = "Čempionui +" .. Kit.formatMoney(tournament.championBonusMoney), color = C.gold, solid = true, order = 1 })
 		Kit.badge({ parent = rewardRow, text = "Už raundą +" .. Kit.formatMoney(tournament.rewardPerRoundWin), color = C.gold, order = 2 })
 		Kit.badge({ parent = rewardRow, text = string.format("+%d rep.", tournament.championBonusReputation), color = C.steelBright, order = 3 })
-		if locked then
-			Kit.badge({ parent = rewardRow, text = "🔒 Reikia " .. Kit.stars(tournament.minStars), color = C.crimsonBright, order = 0 })
-		end
 
 		renderChips()
 		renderCamp()
@@ -735,10 +858,11 @@ function TournamentPanel.create(Kit, State)
 	local careerPage = Kit.scroll({
 		parent = pageHolder,
 		name = "Page_career",
+		size = UDim2.new(1, -8, 1, -10),
 		paddingTop = 2,
 		paddingBottom = 20,
 		paddingLeft = 20,
-		paddingRight = 16,
+		paddingRight = 8,
 		spacing = 12,
 		visible = false,
 	})
@@ -831,36 +955,27 @@ function TournamentPanel.create(Kit, State)
 			local steps = Kit.create("Frame", {
 				Name = "Steps",
 				BackgroundTransparency = 1,
-				Size = UDim2.new(0, 0, 0, 16),
+				Size = UDim2.new(0, 0, 0, 20),
 				AutomaticSize = Enum.AutomaticSize.X,
-				Position = UDim2.new(0, 78, 0, 62),
+				Position = UDim2.new(0, 78, 0, 60),
 				Parent = cardFrame,
 			})
 			Kit.list(steps, 6, Enum.FillDirection.Horizontal, Enum.HorizontalAlignment.Left, Enum.VerticalAlignment.Center)
 			for ladderIndex, ladderTier in ipairs(FightConfig.Ladder) do
-				local reached = ladderIndex <= tierIndex
-				local dot = Kit.create("Frame", {
-					Name = "Step" .. ladderIndex,
-					BackgroundColor3 = reached and C.gold or C.bgCardLight,
-					Size = UDim2.new(0, 0, 0, 16),
-					AutomaticSize = Enum.AutomaticSize.X,
-					LayoutOrder = ladderIndex,
-					Parent = steps,
+				-- pereitas: auksinis kontūras su ✓; dabartinis: pilnas auksas; busimas: pilkas kontūras
+				local passed = ladderIndex < tierIndex
+				local current = ladderIndex == tierIndex
+				local name = Kit.translate("ladder", ladderTier.name)
+				Kit.badge({
+					parent = steps,
+					name = "Step" .. ladderIndex,
+					text = passed and ("✓ " .. name) or name,
+					color = (passed or current) and C.gold or C.border,
+					textColor = current and C.textOnGold or (passed and C.gold or C.textSecondary),
+					solid = current,
+					height = 20,
+					order = ladderIndex,
 				})
-				Kit.corner(dot, UDim.new(1, 0))
-				Kit.stroke(dot, reached and C.goldBright or C.border, 1, reached and 0.3 or 0.2)
-				Kit.padding(dot, 0, 8, 0, 8)
-				local stepLabel = Kit.label({
-					parent = dot,
-					name = "Text",
-					text = Kit.translate("ladder", ladderTier.name),
-					bold = true,
-					textSize = 12,
-					color = reached and C.textOnGold or C.textSecondary,
-					size = UDim2.new(0, 0, 1, 0),
-					autoSize = Enum.AutomaticSize.X,
-				})
-				stepLabel.TextTruncate = Enum.TextTruncate.None
 			end
 
 			-- Progresas iki kito lygio
@@ -899,13 +1014,12 @@ function TournamentPanel.create(Kit, State)
 			-- Desine: kova
 			Kit.label({
 				parent = cardFrame,
-				name = "OpponentCaption",
-				text = "KITAS VARŽOVAS",
-				bold = true,
+				name = "OpponentRange",
+				text = string.format("Varžovo statistika %d–%d", tier.opponentStatMin, tier.opponentStatMax),
 				textSize = 12,
-				color = C.textSecondary,
+				color = C.textPrimary,
 				align = Enum.TextXAlignment.Right,
-				size = UDim2.new(0, 200, 0, 12),
+				size = UDim2.new(0, 220, 0, 16),
 				position = UDim2.new(1, -16, 0, 16),
 				anchor = Vector2.new(1, 0),
 			})
@@ -913,14 +1027,14 @@ function TournamentPanel.create(Kit, State)
 			local chance = roundWinChance(fighterScore, opponentAverage(tier))
 			Kit.label({
 				parent = cardFrame,
-				name = "Opponent",
-				text = string.format("Statistika %d–%d  •  ~%d%% raundui", tier.opponentStatMin, tier.opponentStatMax, math.floor(chance * 100 + 0.5)),
+				name = "Odds",
+				text = string.format("Laimės raundą ~%d%%", math.floor(chance * 100 + 0.5)),
 				bold = true,
-				textSize = 12,
-				color = chance >= 0.65 and C.goldBright or (chance >= 0.4 and C.textPrimary or C.crimsonBright),
+				textSize = 13,
+				color = chance >= 0.6 and C.goldBright or (chance >= 0.4 and C.textPrimary or C.crimsonBright),
 				align = Enum.TextXAlignment.Right,
-				size = UDim2.new(0, 220, 0, 16),
-				position = UDim2.new(1, -16, 0, 30),
+				size = UDim2.new(0, 220, 0, 18),
+				position = UDim2.new(1, -16, 0, 36),
 				anchor = Vector2.new(1, 0),
 			})
 			local reason = nil
@@ -959,17 +1073,37 @@ function TournamentPanel.create(Kit, State)
 		renderCareer()
 	end
 
-	panel.OnLayout(function(layout)
-		narrow = layout.size.X < 640
+	applyNarrow = function()
 		if narrow then
-			listColumn.Size = UDim2.new(1, -40, 0, 150)
-			detail.Position = UDim2.new(0, 20, 0, 158)
-			detail.Size = UDim2.new(1, -40, 1, -174)
+			listColumn.Size = UDim2.new(1, -40, 1, -16)
+			listColumn.Visible = not showingDetailOnNarrow
+			backButton.Instance.Visible = showingDetailOnNarrow
+			detail.Visible = showingDetailOnNarrow
+			detailFooter.Visible = showingDetailOnNarrow
+			detail.Position = UDim2.new(0, 20, 0, 42)
+			detail.Size = UDim2.new(1, -40, 1, -(16 + 42 + FOOTER_HEIGHT))
+			detailFooter.Position = UDim2.new(0, 20, 1, -16)
+			detailFooter.Size = UDim2.new(1, -40, 0, FOOTER_HEIGHT)
 		else
 			listColumn.Size = UDim2.new(0, 256, 1, -16)
+			listColumn.Visible = true
+			backButton.Instance.Visible = false
+			detail.Visible = true
+			detailFooter.Visible = true
 			detail.Position = UDim2.new(0, 296, 0, 0)
-			detail.Size = UDim2.new(1, -312, 1, -16)
+			detail.Size = UDim2.new(1, -312, 1, -(16 + FOOTER_HEIGHT))
+			detailFooter.Position = UDim2.new(0, 296, 1, -16)
+			detailFooter.Size = UDim2.new(1, -312, 0, FOOTER_HEIGHT)
 		end
+	end
+
+	panel.OnLayout(function(layout)
+		local wasNarrow = narrow
+		narrow = layout.compact or layout.size.X < 640
+		if narrow ~= wasNarrow then
+			showingDetailOnNarrow = false
+		end
+		applyNarrow()
 	end)
 
 	local function queue(fn)

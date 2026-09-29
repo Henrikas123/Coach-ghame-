@@ -471,7 +471,7 @@ S.flow_sponsor_refresh = {
 	end,
 	run = function(api)
 		api.open("Sponsor")
-		api.click("Panel_Sponsor/Summary/RefreshButton")
+		api.click("Panel_Sponsor/OffersEmpty/SearchButton")
 		api.wait(1)
 	end,
 	check = function(api)
@@ -500,9 +500,8 @@ S.flow_tournament_enter = {
 	run = function(api)
 		api.open("Tournament")
 		api.click("Panel_Tournament/TournamentList/Tournament_1")
-		api.click("Panel_Tournament/Detail/EnterButton")
+		api.click("Panel_Tournament/DetailFooter/EnterButton")
 		api.wait(2)
-		api.scroll("Panel_Tournament/Detail", 400)
 	end,
 	check = function(api)
 		local p = api.profile()

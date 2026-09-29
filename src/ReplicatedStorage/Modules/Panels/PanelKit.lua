@@ -283,9 +283,15 @@ function PanelKit.button(props)
 
 	local currentText = props.text or ""
 	local function composeText(text)
-		-- ikona rodoma tik aktyviam mygtukui (isjungtas turi atrodyti "tylus")
-		if enabled and props.icon and props.icon ~= "" then
-			return props.icon .. "  " .. text
+		if enabled then
+			if props.icon and props.icon ~= "" then
+				return props.icon .. "  " .. text
+			end
+			return text
+		end
+		-- isjungtas mygtukas rodo busena/prieastą; laikmacius pazymim laikrodziu
+		if string.find(text, "%d+:%d%d") then
+			return "⏱  " .. text
 		end
 		return text
 	end
@@ -305,9 +311,10 @@ function PanelKit.button(props)
 	local function paint(instant)
 		local bgColor, bgTransparency, textColor, textTransparency, strokeColor, strokeTransparency
 		if not enabled then
-			bgColor, bgTransparency = C.bgCardLight, 0.5
-			textColor, textTransparency = C.textSecondary, 0.35
-			strokeColor, strokeTransparency = C.border, 0.8
+			-- "busenos" isvaizda: nepaspaudziamas, bet tekstas (laikmatis, priezastis) gerai matomas
+			bgColor, bgTransparency = C.bgCard, 0
+			textColor, textTransparency = C.textSecondary, 0
+			strokeColor, strokeTransparency = C.border, 0.3
 		elseif hovering then
 			bgColor, bgTransparency = variant.hover, 0
 			textColor, textTransparency = variant.text, 0
@@ -1014,6 +1021,21 @@ function PanelKit.formatDuration(seconds)
 	return string.format("%d:%02d", s // 60, s % 60)
 end
 
+-- Lietuviska daugiskaita: plural(1, "pergalė", "pergalės", "pergalių") -> "1 pergalė"
+function PanelKit.plural(n, one, few, many)
+	local lastTwo = n % 100
+	local last = n % 10
+	local word
+	if last == 1 and lastTwo ~= 11 then
+		word = one
+	elseif last >= 2 and last <= 9 and (lastTwo < 12 or lastTwo > 19) then
+		word = few
+	else
+		word = many
+	end
+	return string.format("%d %s", n, word)
+end
+
 function PanelKit.formatTimeAgo(seconds)
 	local s = math.max(0, math.floor(seconds or 0))
 	if s < 60 then
@@ -1068,10 +1090,11 @@ PanelKit.L = {
 	},
 	-- Config'uose pavadinimai be diakritiku (naudojami kaip raktai) -- rodome taisyklingai
 	names = {
-		["Miesto Taure"] = "Miesto Taurė",
-		["Regiono Cempionatas"] = "Regiono Čempionatas",
-		["Pasaulio Taure"] = "Pasaulio Taurė",
-		["Legendu Arena"] = "Legendų Arena",
+		["Miesto Taure"] = "Miesto taurė",
+		["Regiono Cempionatas"] = "Regiono čempionatas",
+		["Nacionalinis Turnyras"] = "Nacionalinis turnyras",
+		["Pasaulio Taure"] = "Pasaulio taurė",
+		["Legendu Arena"] = "Legendų arena",
 		["Azuolo Mityba"] = "Ąžuolo Mityba",
 		["Gelezinis Kumstis"] = "Geležinis Kumštis",
 		["Cempionu Studija"] = "Čempionų Studija",
@@ -1116,6 +1139,67 @@ end
 -- Stabilus kovotojo raktas (indeksai pasislenka, kai narys palieka akademija)
 function PanelKit.studentKey(student)
 	return tostring(student.name) .. "#" .. tostring(student.memberSince or 0)
+end
+
+-- Zvaigzdes RichText'u: uzpildytos auksines, tuscios -- border spalvos
+function PanelKit.starsRich(count, total)
+	total = total or 5
+	count = math.clamp(count or 0, 0, total)
+	return string.format(
+		"<font color=\"#D4AF37\">%s</font><font color=\"#6A5E48\">%s</font>",
+		string.rep("★", count), string.rep("☆", total - count)
+	)
+end
+
+-- Potencialo zyme (vienoda visose panelese)
+function PanelKit.potentialBadge(props)
+	return PanelKit.badge({
+		parent = props.parent,
+		name = props.name or "Potential",
+		text = "◆ " .. PanelKit.translate("potential", props.potential) .. (props.suffix or ""),
+		color = PanelKit.potentialColor(props.potential),
+		position = props.position,
+		anchor = props.anchor,
+		order = props.order,
+	})
+end
+
+-- Serveriniu zinuciu be diakritiku / su angliskais terminais pataisymas pries rodant toast
+local MESSAGE_FIXES = {
+	{ "tapo jusu remeju", "tapo jūsų rėmėju" },
+	{ "pasirasymo bonusas", "pasirašymo bonusas" },
+	{ "Nauji remeju pasiulymai gauti", "Gauti nauji rėmėjų pasiūlymai" },
+	{ "Sis pasiulymas nebegalioja", "Šis pasiūlymas nebegalioja" },
+	{ "Jau turite maksimalu remeju skaiciu", "Jau turite daugiausia galimų rėmėjų" },
+	{ "iki kitos remeju paieskos", "iki kitos rėmėjų paieškos" },
+	{ "Remimo sutartis baigesi", "Rėmimo sutartis baigėsi" },
+	{ "Kol kas nei vienas remejas nesusidomejo %- kelkite reputacija", "Kol kas nė vienas rėmėjas nesusidomėjo — kelkite reputaciją" },
+	{ "Surinkta (%$%d+) is ", "Surinkta %1 iš " },
+	{ " is remejo", " iš rėmėjo" },
+	{ "%(Rare%)", "(Retas)" },
+	{ "%(Legendary%)", "(Legendinis)" },
+	{ "%(Common%)", "(Įprastas)" },
+	{ "cempionu", "čempionu" },
+	{ "iskrito is", "iškrito iš" },
+	{ "pergale%(%-iu%)", "pergalių" },
+	{ "pralaimejo pirmame", "pralaimėjo pirmame" },
+	{ "Palauk pries dalyvaudamas kitame turnyre", "Palauk prieš dalyvaudamas kitame turnyre" },
+	{ "Nepakanka pinigu dalyvio mokesciui", "Nepakanka pinigų dalyvio mokesčiui" },
+	{ "Sis mokinys susizeides ir negali dalyvauti turnyre", "Šis kovotojas susižeidęs ir negali dalyvauti turnyre" },
+	{ "Reikia daugiau reputacijos zvaigdziu siam turnyrui", "Šiam turnyrui reikia daugiau reputacijos žvaigždžių" },
+	{ " %-%- ", " — " },
+}
+function PanelKit.localizeMessage(text)
+	if type(text) ~= "string" then
+		return text
+	end
+	for _, fix in ipairs(MESSAGE_FIXES) do
+		text = text:gsub(fix[1], fix[2])
+	end
+	for key, display in pairs(PanelKit.L.names) do
+		text = text:gsub(key, display)
+	end
+	return text
 end
 
 function PanelKit.stars(count, total)
@@ -1566,7 +1650,8 @@ function PanelKit.createPanel(def)
 		error = { color = C.crimsonBright, glyph = "!", glyphColor = C.textPrimary },
 		info = { color = C.steelBright, glyph = "i", glyphColor = C.textPrimary },
 	}
-	local toastRestOffset = style == "phone" and -80 or -16
+	-- modalinese panelese toast'as pakeltas virs "sticky" apatiniu juostu (pvz. Issaugoti / Registruotis)
+	local toastRestOffset = style == "phone" and -80 or -84
 	local toastHolder = create("Frame", {
 		Name = "Toast",
 		BackgroundTransparency = 1,
@@ -1656,6 +1741,7 @@ function PanelKit.createPanel(def)
 		if not text or text == "" then
 			return
 		end
+		text = PanelKit.localizeMessage(text)
 		kind = kind or PanelKit.classifyMessage(text)
 		local tone = TOAST_TONES[kind] or TOAST_TONES.success
 		toastStroke.Color = tone.color
@@ -1669,7 +1755,7 @@ function PanelKit.createPanel(def)
 		setToastVisual(1)
 		toastHolder.Visible = true
 		tweenToast(0.22, 0, 0)
-		task.delay(3.8, function()
+		task.delay(3.2, function()
 			if toastToken == myToken then
 				tweenToast(0.22, 1, 12)
 				task.delay(0.23, function()

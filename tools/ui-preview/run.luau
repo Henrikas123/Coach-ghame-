@@ -247,6 +247,8 @@ for _, name in ipairs(clientList) do
 	local source = readFirst({
 		SRC .. "/StarterPlayer/StarterPlayerScripts/" .. name .. ".client.lua",
 		"place:StarterPlayer/StarterPlayerScripts/" .. name,
+		-- surinktame place faile senieji UI skriptai perkelti i ServerStorage/LegacyUI
+		"place:ServerStorage/LegacyUI/" .. name,
 	})
 	table.insert(starterScripts, scriptInstance("LocalScript", name, playerScripts, source))
 end
@@ -272,7 +274,16 @@ function api.find(path)
 	return mock.findPath(playerGui, path)
 end
 function api.click(path)
-	mock.click(api.find(path))
+	local target = api.find(path)
+	-- kaip Roblox: nematomo (ar nematomame tevyje esancio) mygtuko paspausti negalima
+	local node = target
+	while node and node ~= playerGui do
+		if node:IsA("GuiObject") and not node.Visible then
+			error("click: '" .. path .. "' nematomas (" .. node.Name .. ".Visible = false)")
+		end
+		node = node.Parent
+	end
+	mock.click(target)
 	mock.advance(0.6)
 end
 function api.hover(path)

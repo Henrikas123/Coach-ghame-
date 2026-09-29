@@ -21,45 +21,23 @@ local ROLE_ICONS = {
 	NutritionCoach = "🥗",
 }
 
-local FOCUS_LT = {
-	Power = "Jėga",
-	Speed = "Greitis",
-	Defense = "Gynyba",
-	Conditioning = "Kondicija",
-	Technique = "Technika",
-}
-
-local function percent(multiplier)
-	return math.floor(math.abs(multiplier - 1) * 100 + 0.5)
+-- Aprasyme paryskinamas bonuso dydis ("+10%", "-30%"), kad jis butu matomas is karto
+local function highlightBonus(text, hex)
+	local escaped = (text or ""):gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;")
+	return (escaped:gsub("([%+%-]%d+%%)", '<font color="' .. hex .. '"><b>%1</b></font>'))
 end
 
--- Trumpas bonuso aprasas badge'ui is config lauku
-local function bonusSummary(role)
-	local parts = {}
-	if role.trainingMultiplier and role.focus then
-		if #role.focus >= 5 then
-			table.insert(parts, string.format("+%d%% visos treniruotės", percent(role.trainingMultiplier)))
-		else
-			local names = {}
-			for _, focus in ipairs(role.focus) do
-				table.insert(names, FOCUS_LT[focus] or focus)
-			end
-			table.insert(parts, string.format("+%d%% %s", percent(role.trainingMultiplier), table.concat(names, ", ")))
-		end
+-- Kiek laiko uzteks biudzeto atlyginimams (ne "ciklais" -- zaidejui aiskiau laikas)
+local function runwayText(cycles, intervalSeconds)
+	if cycles >= 100 then
+		return "8+ val"
 	end
-	if role.fatigueRecoveryMultiplier then
-		table.insert(parts, string.format("+%d%% atsigavimas", percent(role.fatigueRecoveryMultiplier)))
+	local minutes = cycles * intervalSeconds // 60
+	if minutes >= 60 then
+		local rest = minutes % 60
+		return rest == 0 and string.format("%d val", minutes // 60) or string.format("%d val %d min", minutes // 60, rest)
 	end
-	if role.moraleDriftMultiplier then
-		table.insert(parts, string.format("+%d%% nuotaika", percent(role.moraleDriftMultiplier)))
-	end
-	if role.scoutCostMultiplier then
-		table.insert(parts, string.format("-%d%% paieškos kaina", percent(role.scoutCostMultiplier)))
-	end
-	if role.fatigueGainMultiplier then
-		table.insert(parts, string.format("-%d%% nuovargis", percent(role.fatigueGainMultiplier)))
-	end
-	return table.concat(parts, "  •  ")
+	return string.format("%d min", minutes)
 end
 
 function StaffPanel.create(Kit, State)
@@ -152,7 +130,7 @@ function StaffPanel.create(Kit, State)
 		})
 	end
 
-	Kit.sectionHeader({ parent = scroll, title = "Samdymas", hint = "Atlyginimai nurašomi kas " .. math.floor(StaffConfig.PayrollIntervalSeconds / 60) .. " min", order = 2, accent = C.steelBright })
+	Kit.sectionHeader({ parent = scroll, title = "Samdymas", order = 2, accent = C.steelBright })
 
 	-- ========================================================
 	-- DARBUOTOJU KORTELES
@@ -169,60 +147,65 @@ function StaffPanel.create(Kit, State)
 		local cardFrame, cardStroke = Kit.card({
 			parent = parent,
 			name = "Role_" .. roleId,
-			size = UDim2.new(1, 0, 0, 92),
+			size = UDim2.new(1, 0, 0, 76),
 			order = order,
 		})
 		local iconTile = Kit.create("Frame", {
 			Name = "IconTile",
 			BackgroundColor3 = C.bgCardLight,
-			Size = UDim2.new(0, 52, 0, 52),
+			Size = UDim2.new(0, 48, 0, 48),
 			Position = UDim2.new(0, 16, 0.5, 0),
 			AnchorPoint = Vector2.new(0, 0.5),
 			Parent = cardFrame,
 		})
-		Kit.corner(iconTile, 13)
+		Kit.corner(iconTile, 12)
 		local iconStroke = Kit.stroke(iconTile, C.border, 1, 0.3)
 		Kit.label({
 			parent = iconTile,
 			name = "Icon",
 			text = ROLE_ICONS[roleId] or "👤",
-			textSize = 24,
+			textSize = 22,
 			align = Enum.TextXAlignment.Center,
 			size = UDim2.new(1, 0, 1, 0),
 		})
+		-- Vardas + "Dirba" zenklelis vienoje eiluteje (zenklelis iskart uz vardo)
+		local nameRow = Kit.create("Frame", {
+			Name = "NameRow",
+			BackgroundTransparency = 1,
+			Size = UDim2.new(1, -290, 0, 22),
+			Position = UDim2.new(0, 78, 0, 14),
+			Parent = cardFrame,
+		})
+		Kit.list(nameRow, 8, Enum.FillDirection.Horizontal, Enum.HorizontalAlignment.Left, Enum.VerticalAlignment.Center)
 		local nameLabel = Kit.label({
-			parent = cardFrame,
+			parent = nameRow,
 			name = "Name",
 			text = role.label,
 			bold = true,
 			textSize = 15,
-			size = UDim2.new(1, -300, 0, 20),
-			position = UDim2.new(0, 82, 0, 14),
+			size = UDim2.new(0, 0, 0, 20),
+			autoSize = Enum.AutomaticSize.X,
+			order = 1,
+		})
+		nameLabel.TextTruncate = Enum.TextTruncate.None
+		local hiredBadge = Kit.badge({
+			parent = nameRow,
+			name = "Hired",
+			text = "✓ Dirba",
+			color = C.gold,
+			solid = true,
+			height = 20,
+			order = 2,
 		})
 		Kit.label({
 			parent = cardFrame,
 			name = "Description",
-			text = role.description or "",
+			text = highlightBonus(role.description, "#608EBC"), -- steelBright
+			rich = true,
 			textSize = 12,
 			color = C.textSecondary,
-			size = UDim2.new(1, -300, 0, 16),
-			position = UDim2.new(0, 82, 0, 36),
-		})
-		Kit.badge({
-			parent = cardFrame,
-			name = "Bonus",
-			text = bonusSummary(role),
-			color = C.steelBright,
-			position = UDim2.new(0, 82, 0, 58),
-		})
-		local hiredBadge = Kit.badge({
-			parent = cardFrame,
-			name = "Hired",
-			text = "✓ DIRBA",
-			color = C.gold,
-			solid = true,
-			anchor = Vector2.new(1, 0),
-			position = UDim2.new(1, -196, 0, 14),
+			size = UDim2.new(1, -290, 0, 16),
+			position = UDim2.new(0, 78, 0, 44),
 		})
 		Kit.label({
 			parent = cardFrame,
@@ -232,7 +215,7 @@ function StaffPanel.create(Kit, State)
 			color = C.textSecondary,
 			align = Enum.TextXAlignment.Right,
 			size = UDim2.new(0, 170, 0, 14),
-			position = UDim2.new(1, -16, 0, 16),
+			position = UDim2.new(1, -16, 0, 10),
 			anchor = Vector2.new(1, 0),
 		})
 		local actionButton = Kit.button({
@@ -240,8 +223,8 @@ function StaffPanel.create(Kit, State)
 			name = "ActionButton",
 			text = "Samdyti",
 			variant = "gold",
-			size = UDim2.new(0, 170, 0, 36),
-			position = UDim2.new(1, -16, 1, -14),
+			size = UDim2.new(0, 170, 0, 34),
+			position = UDim2.new(1, -16, 1, -10),
 			anchor = Vector2.new(1, 1),
 			textSize = 13,
 		})
@@ -316,9 +299,9 @@ function StaffPanel.create(Kit, State)
 		summaryColumns.payroll.sub.Text = string.format("kas %d min", minutes)
 		if totalSalary > 0 then
 			local cycles = math.floor(money / totalSalary)
-			summaryColumns.runway.value.Text = cycles >= 100 and "100+ ciklų" or string.format("%d ciklų", cycles)
+			summaryColumns.runway.value.Text = runwayText(cycles, StaffConfig.PayrollIntervalSeconds)
 			summaryColumns.runway.value.TextColor3 = cycles < 3 and C.crimsonBright or (cycles < 10 and C.goldBright or C.textPrimary)
-			summaryColumns.runway.sub.Text = cycles < 3 and "⚠ Trūkstant pinigų darbuotojai išeis" or string.format("≈ %d min atlyginimų", cycles * minutes)
+			summaryColumns.runway.sub.Text = cycles < 3 and "⚠ Trūkstant pinigų darbuotojai išeis" or "atlyginimams mokėti"
 		else
 			summaryColumns.runway.value.Text = "—"
 			summaryColumns.runway.value.TextColor3 = C.textPrimary
