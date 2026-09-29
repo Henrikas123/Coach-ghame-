@@ -189,6 +189,9 @@ function TournamentPanel.create(Kit, State)
 		})
 		tournamentRows[index] = { row = row, stroke = rowStroke, accent = accent, cup = cup, name = name, sub = sub, hover = false }
 		row.MouseEnter:Connect(function()
+			if Kit.isTouchOnly() then
+				return
+			end
 			tournamentRows[index].hover = true
 			paintList()
 		end)

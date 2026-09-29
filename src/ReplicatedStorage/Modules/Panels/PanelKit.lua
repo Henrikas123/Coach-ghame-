@@ -897,6 +897,9 @@ function PanelKit.tabs(props)
 		local entry = { button = btn, label = text, hover = false }
 		buttons[item.key] = entry
 		btn.MouseEnter:Connect(function()
+			if isTouchOnly() then
+				return
+			end
 			entry.hover = true
 			paint(false)
 		end)

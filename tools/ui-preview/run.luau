@@ -14,6 +14,10 @@ local mock = require("./mock")
 -- Keliai: src/ (nauji/pakeisti failai) ir place failas (visi kiti originalus skriptai)
 local REPO = process.env.COACH_REPO or (HERE .. "/../..")
 local SRC = process.env.COACH_SRC or (REPO .. "/src")
+-- COACH_PLACE_ONLY=1: viskas skaitoma is place failo (pvz. patikrinti surinkta CoachAcademy_panels.rbxl)
+if process.env.COACH_PLACE_ONLY == "1" then
+	SRC = "/nonexistent-src"
+end
 local PLACE = process.env.COACH_PLACE or (REPO .. "/CoachAcademy_active2_checkpoint.rbxl")
 
 -- Originaliu skriptu saltiniai is place failo: "ReplicatedStorage/Modules/DataSchema" -> Source
@@ -106,10 +110,19 @@ for _, name in ipairs(MODULES) do
 	scriptInstance("ModuleScript", name, modulesFolder, source)
 end
 local panelsFolder = make("Folder", "Panels", modulesFolder)
-for _, entry in ipairs(fs.readDir(SRC .. "/ReplicatedStorage/Modules/Panels")) do
-	local name = entry:match("^(.-)%.lua$")
-	if name then
-		scriptInstance("ModuleScript", name, panelsFolder, fs.readFile(SRC .. "/ReplicatedStorage/Modules/Panels/" .. entry))
+if fs.isDir(SRC .. "/ReplicatedStorage/Modules/Panels") then
+	for _, entry in ipairs(fs.readDir(SRC .. "/ReplicatedStorage/Modules/Panels")) do
+		local name = entry:match("^(.-)%.lua$")
+		if name then
+			scriptInstance("ModuleScript", name, panelsFolder, fs.readFile(SRC .. "/ReplicatedStorage/Modules/Panels/" .. entry))
+		end
+	end
+else
+	for path, source in pairs(placeSources) do
+		local name = path:match("^ReplicatedStorage/Modules/Panels/([^/]+)$")
+		if name then
+			scriptInstance("ModuleScript", name, panelsFolder, source)
+		end
 	end
 end
 

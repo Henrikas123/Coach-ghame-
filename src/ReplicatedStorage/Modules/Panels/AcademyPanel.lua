@@ -633,6 +633,9 @@ function AcademyPanel.create(Kit, State)
 
 	for styleId, chip in pairs(styleChips) do
 		chip.button.MouseEnter:Connect(function()
+			if Kit.isTouchOnly() then
+				return
+			end
 			chip.hover = true
 			paintStyleChips((findSelected()))
 		end)
@@ -918,6 +921,9 @@ function AcademyPanel.create(Kit, State)
 			end
 
 			row.MouseEnter:Connect(function()
+				if Kit.isTouchOnly() then
+					return
+				end
 				if key ~= selectedKey then
 					Kit.tween(rowStroke, 0.12, { Color = C.gold, Transparency = 0.45 })
 					Kit.tween(row, 0.12, { BackgroundColor3 = C.bgCardLight })
@@ -1474,6 +1480,9 @@ function AcademyPanel.create(Kit, State)
 			zIndex = 4,
 		})
 		choice.MouseEnter:Connect(function()
+			if Kit.isTouchOnly() then
+				return
+			end
 			Kit.tween(scale, 0.12, { Scale = 1.08 }, Enum.EasingStyle.Back)
 		end)
 		choice.MouseLeave:Connect(function()

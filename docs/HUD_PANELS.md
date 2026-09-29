@@ -50,12 +50,20 @@ lune run tools/build_place.luau CoachAcademy_active2_checkpoint.rbxl CoachAcadem
 
 ## Serverio pakeitimai (trumpai)
 
-- **PanelDataHandler (naujas):** `PanelSnapshot` grąžina pilną profilio būseną atidarant panelę, todėl panelės visada rodo tikslius duomenis net jei pradiniai serverio pranešimai praleisti. Taip pat skaičiuoja `profile.lifetimeEarned` / `lifetimeSpent` (Profilio „Pelnas“) iš balanso pokyčių.
-- **AcademyHandler / AcademyConfig:** grindų pasirinkimas (`FloorOptions`, `profile.floorColorIndex`, taikoma `GymLayout.Floor`). Pirmas variantas = esamos grindys.
+- **PanelDataHandler (naujas):** `PanelSnapshot` grąžina pilną profilio būseną atidarant panelę, todėl panelės visada rodo tikslius duomenis net jei pradiniai serverio pranešimai praleisti.
+  - Užklausos ribojamos: dažniau nei kas 0,3 s grąžinama ką tik sudaryta būsena.
+  - Skaičiuoja `profile.lifetimeEarned` / `lifetimeSpent` (Profilio „Pelnas“) iš balanso pokyčių kas sekundę. Pelnas tikslus, bet jei pajamos ir išlaidos įvyksta tą pačią sekundę, „uždirbta/išleista“ skaidymas jas sutraukia.
+- **AcademyHandler / AcademyConfig:** grindų pasirinkimas (`FloorOptions`, `profile.floorColorIndex`, taikoma `GymLayout.Floor`). Pirmas variantas = esamos grindys. Pavadinimo taisymai:
+  - Trumpinama simboliais, ne baitais. Anksčiau lietuviška raidė galėjo būti perkirpta pusiau, ir DataStore tokio (netinkamo UTF-8) profilio nebeišsaugodavo.
+  - Pavadinimas filtruojamas per `TextService`, nes jis matomas visiems ant iškabos.
+  - NaN/inf indeksai atmetami.
 - **TournamentHandler:** laimėjus turnyrą `profile.trophies[pavadinimas] += 1` (trofėjų lentyna).
 - **StaffConfig:** samdymo sąraše 5 koncepcijos tipai. Nauji: Asistentas treneris (+10% visoms treniruotėms), Skautas (−30% paieškos kaina, perpus trumpesnis laukimas), Mitybos specialistas (−25% nuovargio). `SpeedCoach` / `MentalCoach` lieka `Roles` (esami save'ai), tik nebesamdomi.
 - **TrainingHandler:** Mitybos specialisto nuovargio daugiklis. **ScoutHandler:** Skauto nuolaida, `ScoutReportRequest` (Scout Report, $40), genetinės lubos klientui siunčiamos tik nupirkus ataskaitą.
-- **MainHUDController:** `UIGradient` daugina spalvas iš `BackgroundColor3`, todėl StatusPanel ir NavDock buvo beveik juodi. Dabar fonas baltas ir matomi tikri `bgCardLight → bgCard`. Phone FAB šešėlis dabar apvalus.
+- **MainHUDController:**
+  - `UIGradient` daugina spalvas iš `BackgroundColor3`, todėl StatusPanel ir NavDock buvo beveik juodi. Dabar fonas baltas ir matomi tikri `bgCardLight → bgCard`.
+  - Phone FAB šešėlis dabar apvalus.
+  - Pinigai ir reputacija papildomai imami iš `ClientState`. Anksčiau pradinį serverio pranešimą galėjo „pagauti“ kitas skriptas, ir HUD visą sesiją rodė „$ 500“ / „Vietinis treneris“.
 
 ## Testavimas be Studio (`tools/ui-preview`)
 
@@ -71,4 +79,22 @@ cd tools/ui-preview
 python3 fetch_assets.py      # vieną kartą: API dump + šriftai
 ./all.sh                     # visi scenarijai + nuotraukos -> shots/
 ./all.sh academy flow_post   # tik nurodyti
+
+# galutinio place failo patikra (visi skriptai skaitomi iš .rbxl, ne iš src/)
+COACH_PLACE_ONLY=1 COACH_PLACE=../../CoachAcademy_panels.rbxl lune run run.luau flow_customize
 ```
+
+Ko mock'as **negali** patikrinti: tikro įvesties hit-testing, našumo mobiliuosiuose ir Roblox teksto atvaizdavimo (Montserrat čia pakeičia Gotham). Po įdiegimo verta Studio (Play) greitai paspaudyti kiekvieną panelę, ypač telefono (Device Emulator) režimu.
+
+## Kokybės procesas
+
+1. **Creator:** kodas ir scenarijai.
+2. **Art Director / Critic:** dvi vizualinės peržiūros pagal nuotraukas, plius atskira inžinerinė Roblox runtime peržiūra.
+3. **Polisher:** pataisyta, kas rasta, pavyzdžiui:
+   - toast'ai perkelti į panelės apačią;
+   - crimson spalva naudojama tik neigiamoms būsenoms;
+   - 12 px teksto minimumas;
+   - kompaktiškas (telefono) režimas;
+   - `Active` paviršius, kad paspaudimai neprakristų ir neuždarytų panelės;
+   - CanvasGroup pakeistas paprastu Frame;
+   - UTF-8 pavadinimų taisymas.
