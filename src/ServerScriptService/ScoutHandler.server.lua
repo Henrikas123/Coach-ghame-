@@ -132,6 +132,7 @@ ScoutSearchRequest.OnServerEvent:Connect(function(player)
 	end
 	profile.scoutCandidates = candidates
 
+	if _G.CoachAcademyRetention then _G.CoachAcademyRetention.track(player, "scout", 1) end -- kasdienes uzduotys
 	pushScoutUpdate(player, profile, string.format("Your scout found %d prospects!", #candidates))
 end)
 

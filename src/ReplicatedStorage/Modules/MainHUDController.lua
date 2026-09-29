@@ -509,6 +509,60 @@ local function buildPhoneFab(screenGui)
 end
 
 -- ============================================================
+-- DAILY GOALS BUTTON (top right)
+-- ============================================================
+local function buildGoalsButton(screenGui)
+	local button = new("TextButton", {
+		Name = "GoalsButton",
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(1, -16, 0, 16),
+		Size = UDim2.new(0, 200, 0, 44),
+		AutoButtonColor = false,
+		Text = "",
+		ZIndex = 3,
+	}, screenGui)
+	corner(button, 12)
+	local buttonStroke = stroke(button, COLORS.gold, 1.5, 0.35)
+	gradient(button, Color3.fromRGB(50, 43, 50), Color3.fromRGB(24, 21, 26))
+	addShadow(button, 0.55, 4, UDim.new(0, 12))
+	local scale = new("UIScale", { Scale = 1 }, button)
+	attachPress(button, scale)
+	button.MouseEnter:Connect(function()
+		tween(buttonStroke, 0.15, { Transparency = 0.05 })
+	end)
+	button.MouseLeave:Connect(function()
+		tween(buttonStroke, 0.15, { Transparency = 0.35 })
+	end)
+	label({ parent = button, name = "Icon", text = "🎯", size = 20, align = Enum.TextXAlignment.Center, uiSize = UDim2.new(0, 36, 1, 0), position = UDim2.new(0, 6, 0, 0), zIndex = 4 })
+	label({ parent = button, name = "Label", text = "DAILY GOALS", font = Enum.Font.Oswald, size = 17, uiSize = UDim2.new(1, -100, 1, 0), position = UDim2.new(0, 44, 0, 0), zIndex = 4 })
+	local count = label({
+		parent = button,
+		name = "Count",
+		text = "0/3",
+		font = Enum.Font.GothamBlack,
+		size = 14,
+		color = COLORS.goldBright,
+		align = Enum.TextXAlignment.Right,
+		uiSize = UDim2.new(0, 48, 1, 0),
+		position = UDim2.new(1, -12, 0, 0),
+		anchor = Vector2.new(1, 0),
+		zIndex = 4,
+	})
+	local badge = new("Frame", {
+		Name = "Badge",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.new(1, -4, 0, 4),
+		Size = UDim2.new(0, 14, 0, 14),
+		BackgroundColor3 = COLORS.crimsonBright,
+		Visible = false,
+		ZIndex = 6,
+	}, button)
+	corner(badge, UDim.new(1, 0))
+	stroke(badge, COLORS.bg, 2, 0)
+	return button, count, badge
+end
+
+-- ============================================================
 -- PANEL CALLS
 -- ============================================================
 local function callPanel(key)
@@ -532,7 +586,7 @@ end
 -- ============================================================
 -- LIVE DATA
 -- ============================================================
-local function bindLiveData(player, status, fabBadge, fabBadgeText, setActive)
+local function bindLiveData(player, status, fabBadge, fabBadgeText, setActive, goals)
 	local playerGui = player:WaitForChild("PlayerGui")
 
 	-- money counter: counts up/down, pops "+$25" / "-$150"
@@ -656,6 +710,25 @@ local function bindLiveData(player, status, fabBadge, fabBadgeText, setActive)
 			fabBadgeText.Text = tostring(ready)
 		end
 		ClientState.subscribe("marketing", refreshBadge)
+
+		-- daily goals: quests done / total, red dot when something can be claimed
+		local function refreshGoals()
+			local retention = ClientState.get().retention or {}
+			local quests = retention.quests or {}
+			local done, claimable = 0, retention.daily and retention.daily.canClaim == true
+			for _, quest in ipairs(quests) do
+				if quest.progress >= quest.target then
+					done += 1
+					if not quest.claimed then
+						claimable = true
+					end
+				end
+			end
+			goals.count.Text = string.format("%d/%d", done, #quests)
+			goals.badge.Visible = claimable and ClientState.get().loaded == true
+		end
+		ClientState.subscribe("retention", refreshGoals)
+		refreshGoals()
 		task.spawn(function()
 			while playerGui.Parent do
 				refreshBadge()
@@ -714,6 +787,10 @@ function MainHUDController.Init(screenGui, player)
 	local status = buildStatusPanel(screenGui)
 	local navDock, navButtons, setters = buildNavDock(screenGui)
 	local phoneFab, fabBadge, fabBadgeText = buildPhoneFab(screenGui)
+	local goalsButton, goalsCount, goalsBadge = buildGoalsButton(screenGui)
+	goalsButton.MouseButton1Click:Connect(function()
+		callPanel("Goals")
+	end)
 
 	for key, btn in pairs(navButtons) do
 		btn.MouseButton1Click:Connect(function()
@@ -736,7 +813,7 @@ function MainHUDController.Init(screenGui, player)
 			setters[key](isOpen)
 		end
 	end
-	bindLiveData(player, status, fabBadge, fabBadgeText, setActive)
+	bindLiveData(player, status, fabBadge, fabBadgeText, setActive, { count = goalsCount, badge = goalsBadge })
 
 	return {
 		StatusPanel = status.panel,

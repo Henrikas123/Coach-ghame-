@@ -74,6 +74,7 @@ local function buildSnapshot(player)
 		lifetimeEarned = profile.lifetimeEarned or 0,
 		lifetimeSpent = profile.lifetimeSpent or 0,
 		trophies = profile.trophies or {},
+		retention = _G.CoachAcademyRetention and _G.CoachAcademyRetention.publicState(player, profile) or nil,
 	}
 end
 

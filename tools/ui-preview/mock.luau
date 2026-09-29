@@ -1284,6 +1284,17 @@ classMethods.Players = {
 	GetPlayerFromCharacter = function()
 		return nil
 	end,
+	GetPlayerByUserId = function(_, userId)
+		local player = M.localPlayer
+		if player and player.UserId == userId then
+			return player
+		end
+		return nil
+	end,
+	GetNameFromUserIdAsync = function(_, userId)
+		task.wait(0.05)
+		return "Coach" .. tostring(userId)
+	end,
 }
 specialGetters.Players = {
 	LocalPlayer = function()

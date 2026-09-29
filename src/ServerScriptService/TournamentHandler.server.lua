@@ -156,6 +156,7 @@ TournamentEnterRequest.OnServerEvent:Connect(function(player, studentIndex, tour
 	activeTournament[player] = true
 	profile.pinigai -= tournament.entryFee
 	profile.lastTournamentAt = now
+	if _G.CoachAcademyRetention then _G.CoachAcademyRetention.track(player, "tournament", 1) end -- kasdienes uzduotys
 
 	local ladderIndex = math.clamp(tournament.opponentTier or 1, 1, #FightConfig.Ladder)
 	local tier = FightConfig.Ladder[ladderIndex]
@@ -207,6 +208,10 @@ TournamentEnterRequest.OnServerEvent:Connect(function(player, studentIndex, tour
 
 	profile.pinigai += rewardMoney
 	profile.reputacija += rewardReputation
+	profile.lifetimeFightsWon = (profile.lifetimeFightsWon or 0) + roundsWon
+	if roundsWon > 0 then
+		if _G.CoachAcademyRetention then _G.CoachAcademyRetention.track(player, "fightWon", roundsWon) end -- kasdienes uzduotys
+	end
 
 	local message
 	if champion then

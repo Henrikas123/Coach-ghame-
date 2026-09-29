@@ -2012,6 +2012,15 @@ function PanelKit.isOpen(key)
 	return entry ~= nil and entry.panel ~= nil and entry.panel.IsOpen
 end
 
+function PanelKit.isAnyOpen()
+	for _, entry in pairs(registry) do
+		if entry.panel and entry.panel.IsOpen then
+			return true
+		end
+	end
+	return false
+end
+
 -- Modalinis elgesys: visada modalinems panelems, o telefonui -- tik kompaktiskame (mazo ekrano) rezime
 local function isModalLike(panel, layout)
 	return panel.Style == "modal" or (layout ~= nil and layout.compact == true)

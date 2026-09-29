@@ -103,6 +103,7 @@ MarketingPostContent.OnServerEvent:Connect(function(player, contentTypeId)
 	profile.lastPostTimes[contentTypeId] = now
 
 	local message = string.format("%s posted! +%d followers, +%d reach.", item.label, followersGain, reachGain)
+	if _G.CoachAcademyRetention then _G.CoachAcademyRetention.track(player, "post", 1) end -- kasdienes uzduotys
 
 	local newWalkIns = 0
 	while profile.reachAccumulated >= profile.walkInThreshold do

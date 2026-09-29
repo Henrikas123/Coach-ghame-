@@ -112,7 +112,13 @@ for _, file in ipairs(listLua(SRC .. "/StarterPlayer/StarterPlayerScripts", ".cl
 end
 
 note("Remotes:")
-for name, className in pairs({ PanelSnapshot = "RemoteFunction", ScoutReportRequest = "RemoteEvent" }) do
+for name, className in pairs({
+	PanelSnapshot = "RemoteFunction",
+	ScoutReportRequest = "RemoteEvent",
+	RetentionUpdate = "RemoteEvent",
+	RetentionRequest = "RemoteEvent",
+	LeaderboardFetch = "RemoteFunction",
+}) do
 	if not Remotes:FindFirstChild(name) then
 		local remote = Instance.new(className)
 		remote.Name = name
@@ -134,6 +140,35 @@ for _, name in ipairs(LEGACY_UI) do
 		script.Parent = legacyFolder
 		note("  perkelta    %s", name)
 	end
+end
+
+-- Lyderiu lentos stendas mieste (RetentionHandler piesia SurfaceGui). Studio ji galima laisvai perkelti.
+note("Lyderiu lentos stendas:")
+local town = game:GetService("Workspace"):FindFirstChild("Town")
+if town and not town:FindFirstChild("LeaderboardBoard") then
+	local model = Instance.new("Model")
+	model.Name = "LeaderboardBoard"
+	local CFrame, Vector3, Color3 = roblox.CFrame, roblox.Vector3, roblox.Color3
+	local origin = CFrame.new(-24, 0, 46) -- prie salės išėjimo, priekis (-Z) atsuktas į salę
+	local function part(name, size, offset, color, material)
+		local p = Instance.new("Part")
+		p.Name = name
+		p.Anchored = true
+		p.Size = size
+		p.CFrame = origin * CFrame.new(offset)
+		p.Color = color
+		p.Material = material
+		p.TopSurface = roblox.Enum.SurfaceType.Smooth
+		p.BottomSurface = roblox.Enum.SurfaceType.Smooth
+		p.Parent = model
+		return p
+	end
+	part("Board", Vector3.new(12, 8, 0.6), Vector3.new(0, 7, 0), Color3.fromRGB(22, 20, 24), roblox.Enum.Material.SmoothPlastic)
+	part("Frame", Vector3.new(12.8, 8.8, 0.4), Vector3.new(0, 7, 0.3), Color3.fromRGB(212, 175, 55), roblox.Enum.Material.Metal)
+	part("PostLeft", Vector3.new(0.6, 11, 0.6), Vector3.new(-5.6, 5.5, 0.6), Color3.fromRGB(38, 34, 40), roblox.Enum.Material.Metal)
+	part("PostRight", Vector3.new(0.6, 11, 0.6), Vector3.new(5.6, 5.5, 0.6), Color3.fromRGB(38, 34, 40), roblox.Enum.Material.Metal)
+	model.Parent = town
+	note("  pridėtas    Town/LeaderboardBoard")
 end
 
 -- Pasaulio tekstai anglu kalba (ProximityPrompt'ai ir isjungtas senas MainHUD)

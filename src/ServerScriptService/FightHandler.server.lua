@@ -241,6 +241,8 @@ local function runFight(player, profile, student, studentIndex)
 			)
 		end
 
+		profile.lifetimeFightsWon = (profile.lifetimeFightsWon or 0) + 1
+		if _G.CoachAcademyRetention then _G.CoachAcademyRetention.track(player, "fightWon", 1) end -- kasdienes uzduotys
 		push(player, {
 			phase = "result",
 			won = true,

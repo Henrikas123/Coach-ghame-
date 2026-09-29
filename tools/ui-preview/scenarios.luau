@@ -591,6 +591,69 @@ S.ds_locked = {
 		assert(stored.lockedBy ~= "other-server", "lock not taken over")
 	end,
 }
+-- ============================================================
+-- DAILY GOALS (kasdienis prizas, uzduotys, lyderiu lenta)
+-- ============================================================
+local DAY = 1790000000 // 86400
+local function goalsSeed(profile, now)
+	richSeed(profile, now)
+	profile.tutorial = { step = 99, done = true }
+	profile.daily = { lastClaimDay = DAY - 1, streak = 2 }
+	profile.quests = { day = DAY, list = {
+		{ id = "train5", progress = 5, claimed = false },
+		{ id = "win2", progress = 1, claimed = false },
+		{ id = "post3", progress = 3, claimed = true },
+	} }
+end
+S.goals = { seed = goalsSeed, run = function(api) api.ensureOpen("Goals") end }
+S.goals_phone = { seed = goalsSeed, viewport = "phone", run = function(api) api.ensureOpen("Goals") end }
+S.goals_board = {
+	seed = goalsSeed,
+	run = function(api)
+		api.ensureOpen("Goals")
+		api.click("Panel_Goals/Tabs/Tab_board")
+		api.wait(2)
+	end,
+}
+S.flow_daily_claim = {
+	seed = goalsSeed,
+	run = function(api)
+		api.ensureOpen("Goals")
+		api.click("Panel_Goals/StreakCard/ClaimButton")
+		api.wait(1)
+	end,
+	check = function(api)
+		local p = api.profile()
+		assert(p.daily.streak == 3 and p.daily.lastClaimDay == DAY, "streak not advanced")
+		assert(p.pinigai == 2450 + 200, "day 3 reward not paid: " .. tostring(p.pinigai))
+	end,
+}
+S.flow_quest_claim = {
+	seed = goalsSeed,
+	run = function(api)
+		api.ensureOpen("Goals")
+		api.click("Panel_Goals/Quest1/ClaimButton")
+		api.wait(1)
+	end,
+	check = function(api)
+		local p = api.profile()
+		assert(p.quests.list[1].claimed == true, "quest not claimed")
+		assert(p.pinigai == 2450 + 150, "quest reward not paid: " .. tostring(p.pinigai))
+	end,
+}
+S.flow_daily_popup = {
+	seed = goalsSeed,
+	intro = true,
+	bootWait = 12,
+	run = function(api)
+		api.click("CoachTitleScreen/Content/TitleBlock/PlayButton")
+		api.wait(4)
+	end,
+	check = function(api)
+		local goals = api.find("Panel_Goals")
+		assert(goals and goals.Visible, "daily goals did not open after PLAY")
+	end,
+}
 S.tournament_fresh = { seed = freshSeed, run = function(api) api.open("Tournament") end }
 S.flow_tournament_enter = {
 	seed = richSeed,

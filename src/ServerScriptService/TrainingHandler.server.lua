@@ -311,6 +311,7 @@ TrainingRequest.OnServerEvent:Connect(function(player, focusName, sessionTypeNam
 		end
 	end
 
+	if _G.CoachAcademyRetention then _G.CoachAcademyRetention.track(player, "train", 1) end -- kasdienes uzduotys
 	pushUpdate(player, profile, msg)
 end)
 

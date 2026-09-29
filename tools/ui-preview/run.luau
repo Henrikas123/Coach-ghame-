@@ -104,7 +104,7 @@ local modulesFolder = make("Folder", "Modules", ReplicatedStorage)
 local MODULES = {
 	"DataSchema", "TrainingConfig", "EquipmentConfig", "MarketingConfig", "FightConfig", "AcademyConfig",
 	"InjuryConfig", "StaffConfig", "ScoutConfig", "SponsorConfig", "TournamentConfig", "MainHUDController",
-	"SoundConfig", "Sfx", "IconConfig",
+	"SoundConfig", "Sfx", "IconConfig", "RetentionConfig",
 }
 for _, name in ipairs(MODULES) do
 	local source = readFirst({
@@ -138,6 +138,7 @@ for _, name in ipairs({
 	"FireStaffRequest", "StaffUpdate", "ScoutSearchRequest", "ScoutRecruitRequest", "ScoutUpdate",
 	"SponsorRefreshRequest", "SponsorAcceptRequest", "SponsorCollectRequest", "SponsorUpdate",
 	"TournamentRefreshRequest", "TournamentEnterRequest", "TournamentUpdate",
+	"RetentionUpdate", "RetentionRequest",
 }) do
 	make("RemoteEvent", name, remotesFolder)
 end
@@ -168,7 +169,7 @@ make("TextLabel", "NameLabel", billboard)
 local SERVER_SCRIPTS = {
 	"DataStoreHandler", "TrainingHandler", "EquipmentHandler", "MarketingHandler", "ReputationHandler",
 	"FightHandler", "AcademyHandler", "StyleHandler", "MoraleHandler", "InjuryHandler", "StaffHandler",
-	"ScoutHandler", "SponsorHandler", "TournamentHandler", "PanelDataHandler",
+	"ScoutHandler", "SponsorHandler", "TournamentHandler", "PanelDataHandler", "RetentionHandler",
 }
 local serverScripts = {}
 for _, name in ipairs(SERVER_SCRIPTS) do
@@ -280,6 +281,14 @@ function api.open(key)
 	assert(panels and panels[key], "panel not registered: " .. key)
 	panels[key]()
 	mock.advance(1)
+end
+-- atidaro panele tik jei ji dar neatidaryta (kai kurias paneles zaidimas atidaro pats)
+function api.ensureOpen(key)
+	local ok, frame = pcall(api.find, "Panel_" .. key)
+	if ok and frame and frame.Visible then
+		return
+	end
+	api.open(key)
 end
 function api.wait(seconds)
 	mock.advance(seconds)

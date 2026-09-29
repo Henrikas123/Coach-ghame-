@@ -187,6 +187,7 @@ SponsorCollectRequest.OnServerEvent:Connect(function(player, sponsorPos)
 	profile.pinigai = (profile.pinigai or 0) + income
 	entry.nextCollectAt = now + SponsorConfig.CollectCycleSeconds
 
+	if _G.CoachAcademyRetention then _G.CoachAcademyRetention.track(player, "collect", 1) end -- kasdienes uzduotys
 	pushSponsorUpdate(player, profile, string.format("Collected $%d from %s.", income, sConf and sConf.name or "a sponsor"))
 end)
 

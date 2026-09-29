@@ -65,6 +65,8 @@ local state = {
 	sponsor = { sponsors = {}, offers = {}, lastRefresh = 0 },
 	tournament = { lastTournamentAt = 0, lastResult = nil },
 	stats = { lifetimeEarned = 0, lifetimeSpent = 0, trophies = {} },
+	-- kasdienis prizas + uzduotys (RetentionHandler.publicState); receivedAt -- laikmaciui
+	retention = { daily = { canClaim = false, streak = 0, claimStreak = 0, rewardIndex = 1, reward = 0 }, rewards = {}, quests = {}, secondsToReset = 0, tutorialDone = true, receivedAt = 0 },
 	feed = {}, -- { kind, icon, title, text, time }
 }
 
@@ -334,6 +336,11 @@ local function applySnapshot(snapshot)
 	state.stats.lifetimeEarned = snapshot.lifetimeEarned or state.stats.lifetimeEarned
 	state.stats.lifetimeSpent = snapshot.lifetimeSpent or state.stats.lifetimeSpent
 	state.stats.trophies = snapshot.trophies or state.stats.trophies
+	if type(snapshot.retention) == "table" then
+		state.retention = snapshot.retention
+		state.retention.receivedAt = os.clock()
+		notify("retention")
+	end
 	state.loaded = true
 	notify("profile")
 end
@@ -499,6 +506,16 @@ function ClientState.start()
 		state.scout.lastScoutAt = data.lastScoutAt or state.scout.lastScoutAt
 		notify("scout")
 		pushMessage("scout", data.message)
+	end)
+
+	connect("RetentionUpdate", function(data)
+		setMoney(data.pinigai)
+		if type(data.state) == "table" then
+			state.retention = data.state
+			state.retention.receivedAt = os.clock()
+			notify("retention")
+		end
+		pushMessage("retention", data.message)
 	end)
 
 	connect("SponsorUpdate", function(data)

@@ -65,6 +65,7 @@ EncourageRequest.OnServerEvent:Connect(function(player, studentIndex)
 
 	student.lastEncourageAt = now
 	student.morale = math.clamp((student.morale or DataSchema.Morale.Default) + DataSchema.Morale.EncourageGain, DataSchema.Morale.Min, DataSchema.Morale.Max)
+	if _G.CoachAcademyRetention then _G.CoachAcademyRetention.track(player, "encourage", 1) end -- kasdienes uzduotys
 	pushUpdate(player, profile, string.format("You encouraged %s! Morale +%d (now %d)", student.name, DataSchema.Morale.EncourageGain, student.morale))
 end)
 

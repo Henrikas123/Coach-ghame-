@@ -24,6 +24,7 @@ local PANEL_MODULES = {
 	Sponsor = "SponsorPanel",
 	Tournament = "TournamentPanel",
 	Phone = "PhonePanel",
+	Goals = "GoalsPanel",
 }
 
 -- Musu paneliu funkcijos. _G.CoachAcademyPanels pakeiciamas proxy lentele, kad senieji UI skriptai
@@ -87,12 +88,39 @@ _G.CoachAcademyPanels = setmetatable({}, {
 -- Paneles sukuriamos is anksto (po viena per kadra), kad pirmas atidarymas nestrigtu
 task.delay(2, function()
 	local keys = {}
-	for _, key in ipairs({ "Profile", "Academy", "Phone", "Tournament", "Staff", "Scout", "Sponsor" }) do
+	for _, key in ipairs({ "Profile", "Academy", "Phone", "Tournament", "Staff", "Scout", "Sponsor", "Goals" }) do
 		if owned[key] then
 			table.insert(keys, key)
 		end
 	end
 	PanelKit.prebuild(keys)
+end)
+
+-- Kasdienis prizas: kai zaidejas pradeda zaisti (po titulinio ekrano) ir prizas dar neatsiimtas,
+-- vien karta per sesija atidarome "Daily Goals". Naujokams -- tik po pamokos.
+task.spawn(function()
+	local deadline = os.clock() + 120
+	while os.clock() < deadline do
+		local intro = player:GetAttribute("CoachIntro")
+		if intro == nil or intro == "playing" then
+			break
+		end
+		task.wait(0.5)
+	end
+	task.wait(1.5)
+	local shown = false
+	local function tryShow()
+		if shown or not owned.Goals then
+			return
+		end
+		local retention = ClientState.get().retention
+		if retention and retention.daily and retention.daily.canClaim and retention.tutorialDone and not PanelKit.isAnyOpen() then
+			shown = true
+			PanelKit.open("Goals")
+		end
+	end
+	tryShow()
+	ClientState.subscribe("retention", tryShow)
 end)
 
 print("PanelsBootstrap: HUD panelės užregistruotos.")
