@@ -1,0 +1,527 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="cache/fonts/local-fonts.css">
+<style>
+  html, body { margin: 0; padding: 0; overflow: hidden; }
+  body { font-family: 'Montserrat', 'Noto Color Emoji', sans-serif; }
+  #world {
+    position: absolute; inset: 0; overflow: hidden;
+    background:
+      radial-gradient(ellipse at 30% 35%, rgba(255,240,210,0.18), transparent 55%),
+      linear-gradient(180deg, #7d8894 0%, #5f6873 48%, #4d535b 58%, #8c8f92 58.2%, #6d7073 100%);
+  }
+  #world .ring { position:absolute; left:38%; top:46%; width:34%; height:26%; border:3px solid rgba(180,40,54,0.55);
+    box-shadow: inset 0 0 0 10px rgba(255,255,255,0.08), 0 30px 60px rgba(0,0,0,0.25); transform: perspective(600px) rotateX(55deg); }
+  #world .bag { position:absolute; left:14%; top:30%; width:3.2%; height:26%; background: linear-gradient(90deg,#3b2a22,#6b4a38,#3b2a22); border-radius: 18px; }
+  #world .bag2 { left: 82%; top: 28%; }
+  #world .topbar { position:absolute; left:0; top:0; right:0; background: rgba(0,0,0,0.0); }
+  #world .topbar .pill { position:absolute; left:12px; top:10px; height:36px; width:110px; border-radius:12px; background: rgba(20,20,22,0.55); }
+  .node { position: absolute; box-sizing: border-box; }
+  .bg { position: absolute; inset: 0; }
+  .clip { position: absolute; inset: 0; }
+  .txt { position: absolute; inset: 0; display: flex; box-sizing: border-box; font-family: 'Montserrat', 'Noto Color Emoji', sans-serif; }
+  .txt > span { display: block; width: 100%; }
+  .overflow-debug { outline: 2px dashed #ff00ff; outline-offset: -1px; }
+</style>
+</head>
+<body>
+<div id="world"><div class="ring"></div><div class="bag"></div><div class="bag bag2"></div><div class="topbar"><div class="pill"></div></div></div>
+<div id="root"></div>
+<script>
+'use strict';
+const GUI_CLASSES = new Set(['Frame','TextLabel','TextButton','TextBox','ImageLabel','ImageButton','ScrollingFrame','CanvasGroup','ViewportFrame','VideoFrame']);
+const TEXT_CLASSES = new Set(['TextLabel','TextButton','TextBox']);
+const FONT_SCALE = 0.82; // Roblox TextSize = line height; CSS font-size smaller to match glyph size
+const issues = [];
+let measureCtx = null;
+
+function fontSpec(fontName) {
+  const bold = /Bold|Black|Heavy|SemiBold/.test(fontName || '');
+  if (/Gotham|Montserrat/.test(fontName || '')) return { family: "'Montserrat', 'Noto Color Emoji'", weight: bold ? 700 : 500 };
+  return { family: "'Liberation Sans', 'Noto Color Emoji'", weight: bold ? 700 : 400 };
+}
+function cssFont(p, size) {
+  const f = fontSpec(p.Font);
+  return `${f.weight} ${size * FONT_SCALE}px ${f.family}`;
+}
+function measureWidth(text, p, size) {
+  if (!measureCtx) measureCtx = document.createElement('canvas').getContext('2d');
+  measureCtx.font = cssFont(p, size);
+  return measureCtx.measureText(text).width;
+}
+function stripRich(text) {
+  return text.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&apos;/g,"'");
+}
+function plainText(p) {
+  let t = (p.Text === undefined || p.Text === null) ? '' : String(p.Text);
+  if (p.RichText) t = stripRich(t);
+  return t;
+}
+function wrapLines(text, p, size, width) {
+  const lines = [];
+  for (const para of text.split('\n')) {
+    const words = para.split(/(\s+)/);
+    let line = '';
+    for (const w of words) {
+      const candidate = line + w;
+      if (line.trim() !== '' && measureWidth(candidate.trimEnd(), p, size) > width + 0.5) {
+        lines.push(line.trimEnd());
+        line = w.trimStart();
+      } else {
+        line = candidate;
+      }
+    }
+    lines.push(line.trimEnd());
+  }
+  return lines;
+}
+function textBounds(p, size, widthLimit) {
+  const text = plainText(p);
+  const lh = size * (p.LineHeight || 1);
+  if (text === '') return { w: 0, h: 0, lines: 0 };
+  if (p.TextWrapped && widthLimit !== undefined) {
+    const lines = wrapLines(text, p, size, widthLimit);
+    let w = 0; for (const l of lines) w = Math.max(w, measureWidth(l, p, size));
+    return { w, h: lines.length * lh, lines: lines.length };
+  }
+  const parts = text.split('\n');
+  let w = 0; for (const l of parts) w = Math.max(w, measureWidth(l, p, size));
+  return { w, h: parts.length * lh, lines: parts.length };
+}
+
+function udim2(v, pw, ph) { return v ? { x: v.xs * pw + v.xo, y: v.ys * ph + v.yo } : { x: 0, y: 0 }; }
+function udim(v, ref) { return v ? v.s * ref + v.o : 0; }
+function color(c, transparency) {
+  if (!c) return 'transparent';
+  const a = 1 - (transparency || 0);
+  return `rgba(${Math.round(c.r*255)},${Math.round(c.g*255)},${Math.round(c.b*255)},${a.toFixed(3)})`;
+}
+function childrenOf(node, cls) { return node.ch.filter(c => c.c === cls); }
+function firstChild(node, cls) { return node.ch.find(c => c.c === cls); }
+function guiChildren(node) { return node.ch.filter(c => GUI_CLASSES.has(c.c) && c.p.Visible !== false); }
+
+function paddingOf(node, w, h) {
+  const pad = firstChild(node, 'UIPadding');
+  if (!pad) return { l: 0, r: 0, t: 0, b: 0 };
+  return { l: udim(pad.p.PaddingLeft, w), r: udim(pad.p.PaddingRight, w), t: udim(pad.p.PaddingTop, h), b: udim(pad.p.PaddingBottom, h) };
+}
+function sortLayoutItems(items, layout) {
+  const byName = layout.p.SortOrder === 'Name';
+  return items.map((n, i) => ({ n, i })).sort((a, b) => {
+    if (byName) return a.n.n < b.n.n ? -1 : a.n.n > b.n.n ? 1 : a.i - b.i;
+    const la = a.n.p.LayoutOrder || 0, lb = b.n.p.LayoutOrder || 0;
+    return la !== lb ? la - lb : a.i - b.i;
+  }).map(x => x.n);
+}
+
+// Compute a node's own size (before automatic size) relative to parent content size
+function baseSize(node, pw, ph) {
+  const s = udim2(node.p.Size, pw, ph);
+  let w = s.x, h = s.y;
+  const c = firstChild(node, 'UISizeConstraint');
+  if (c) {
+    w = Math.min(Math.max(w, c.p.MinSize.x), c.p.MaxSize.x);
+    h = Math.min(Math.max(h, c.p.MinSize.y), c.p.MaxSize.y);
+  }
+  return { w, h };
+}
+
+// Lays out node at a given size & position (absolute), then its children.
+function place(node, x, y, w, h) {
+  node.abs = { x, y, w, h };
+  layoutChildren(node);
+}
+
+// Returns content extent of children (for automatic sizing), in node-local content coordinates
+function contentExtent(node) {
+  const w = node.abs.w, h = node.abs.h;
+  const pad = paddingOf(node, w, h);
+  let ex = 0, ey = 0;
+  const list = firstChild(node, 'UIListLayout') || firstChild(node, 'UIGridLayout');
+  if (list && node._contentSize) {
+    ex = node._contentSize.x; ey = node._contentSize.y;
+  } else {
+    for (const ch of guiChildren(node)) {
+      if (!ch.abs) continue;
+      const rx = ch.abs.x - (node.abs.x + pad.l) + ch.abs.w;
+      const ry = ch.abs.y - (node.abs.y + pad.t) + ch.abs.h;
+      ex = Math.max(ex, rx); ey = Math.max(ey, ry);
+    }
+  }
+  return { x: ex + pad.l + pad.r, y: ey + pad.t + pad.b };
+}
+
+// Size a child: returns {w,h} including automatic size resolution (lays out subtree provisionally)
+function resolveSize(node, pw, ph) {
+  let { w, h } = baseSize(node, pw, ph);
+  const auto = node.p.AutomaticSize || 'None';
+  if (auto === 'None') return { w, h };
+  // text contribution
+  if (TEXT_CLASSES.has(node.c)) {
+    const size = node.p.TextSize || 14;
+    const pad = paddingOf(node, w, h);
+    const limit = auto === 'X' || auto === 'XY' ? undefined : w - pad.l - pad.r;
+    const b = textBounds(node.p, size, node.p.TextWrapped ? limit : undefined);
+    if (auto === 'X' || auto === 'XY') w = Math.max(w, Math.ceil(b.w) + pad.l + pad.r);
+    if (auto === 'Y' || auto === 'XY') h = Math.max(h, Math.ceil(b.h) + pad.t + pad.b);
+  }
+  // children contribution: provisional layout
+  node.abs = { x: 0, y: 0, w, h };
+  layoutChildren(node);
+  const ext = contentExtent(node);
+  if (auto === 'X' || auto === 'XY') w = Math.max(w, ext.x);
+  if (auto === 'Y' || auto === 'XY') h = Math.max(h, ext.y);
+  return { w, h };
+}
+
+function layoutChildren(node) {
+  const { x, y, w, h } = node.abs;
+  let pad = paddingOf(node, w, h);
+  let originX = x + pad.l, originY = y + pad.t;
+  let cw = w - pad.l - pad.r, chh = h - pad.t - pad.b;
+
+  if (node.c === 'ScrollingFrame') {
+    return layoutScrolling(node);
+  }
+  layoutInBox(node, originX, originY, cw, chh);
+}
+
+function layoutInBox(node, ox, oy, cw, chh) {
+  const items = guiChildren(node);
+  const list = firstChild(node, 'UIListLayout');
+  const grid = firstChild(node, 'UIGridLayout');
+  if (list) {
+    const sorted = sortLayoutItems(items, list);
+    const vertical = (list.p.FillDirection || 'Vertical') === 'Vertical';
+    const gap = udim(list.p.Padding, vertical ? chh : cw);
+    const sizes = sorted.map(n => resolveSize(n, cw, chh));
+    let total = 0, cross = 0;
+    sizes.forEach((s, i) => { total += (vertical ? s.h : s.w) + (i > 0 ? gap : 0); cross = Math.max(cross, vertical ? s.w : s.h); });
+    let cursor;
+    if (vertical) {
+      const va = list.p.VerticalAlignment || 'Top';
+      cursor = va === 'Center' ? oy + (chh - total) / 2 : va === 'Bottom' ? oy + chh - total : oy;
+    } else {
+      const ha = list.p.HorizontalAlignment || 'Left';
+      cursor = ha === 'Center' ? ox + (cw - total) / 2 : ha === 'Right' ? ox + cw - total : ox;
+    }
+    sorted.forEach((n, i) => {
+      const s = sizes[i];
+      let px, py;
+      if (vertical) {
+        const ha = list.p.HorizontalAlignment || 'Left';
+        px = ha === 'Center' ? ox + (cw - s.w) / 2 : ha === 'Right' ? ox + cw - s.w : ox;
+        py = cursor; cursor += s.h + gap;
+      } else {
+        const va = list.p.VerticalAlignment || 'Top';
+        py = va === 'Center' ? oy + (chh - s.h) / 2 : va === 'Bottom' ? oy + chh - s.h : oy;
+        px = cursor; cursor += s.w + gap;
+      }
+      place(n, px, py, s.w, s.h);
+    });
+    node._contentSize = vertical ? { x: cross, y: total } : { x: total, y: cross };
+    // non-layout children? (UIListLayout affects all GuiObject children)
+    return;
+  }
+  if (grid) {
+    const sorted = sortLayoutItems(items, grid);
+    const cell = udim2(grid.p.CellSize, cw, chh);
+    const cpad = udim2(grid.p.CellPadding, cw, chh);
+    let perRow = Math.max(1, Math.floor((cw + cpad.x) / (cell.x + cpad.x) + 1e-9));
+    if (grid.p.FillDirectionMaxCells > 0) perRow = Math.min(perRow, grid.p.FillDirectionMaxCells);
+    const rows = Math.ceil(sorted.length / perRow);
+    const cols = Math.min(perRow, sorted.length);
+    const totalW = cols * cell.x + Math.max(0, cols - 1) * cpad.x;
+    const totalH = rows * cell.y + Math.max(0, rows - 1) * cpad.y;
+    const ha = grid.p.HorizontalAlignment || 'Left';
+    const startX = ha === 'Center' ? ox + (cw - totalW) / 2 : ha === 'Right' ? ox + cw - totalW : ox;
+    const va = grid.p.VerticalAlignment || 'Top';
+    const startY = va === 'Center' ? oy + (chh - totalH) / 2 : va === 'Bottom' ? oy + chh - totalH : oy;
+    sorted.forEach((n, i) => {
+      const r = Math.floor(i / perRow), c = i % perRow;
+      place(n, startX + c * (cell.x + cpad.x), startY + r * (cell.y + cpad.y), cell.x, cell.y);
+    });
+    node._contentSize = { x: totalW, y: totalH };
+    if (perRow < Math.min(sorted.length, Math.round((cw + cpad.x) / (cell.x + cpad.x)))) {
+      issues.push({ kind: 'grid-wrap', path: pathOf(node), text: `grid fits ${perRow} per row` });
+    }
+    return;
+  }
+  node._contentSize = null;
+  for (const n of items) {
+    const s = resolveSize(n, cw, chh);
+    const pos = udim2(n.p.Position, cw, chh);
+    const ap = n.p.AnchorPoint || { x: 0, y: 0 };
+    place(n, ox + pos.x - ap.x * s.w, oy + pos.y - ap.y * s.h, s.w, s.h);
+  }
+}
+
+function layoutScrolling(node) {
+  const { x, y, w, h } = node.abs;
+  const p = node.p;
+  const thickness = p.ScrollBarThickness || 0;
+  const insetMode = p.VerticalScrollBarInset || 'None';
+  const doLayout = (contentW) => {
+    const canvasSpec = udim2(p.CanvasSize, contentW, h);
+    let canvasW = canvasSpec.x || contentW, canvasH = canvasSpec.y;
+    // provisional canvas
+    const padA = paddingOf(node, canvasW, Math.max(canvasH, h));
+    const cp = p.CanvasPosition || { x: 0, y: 0 };
+    const ox = x - cp.x + padA.l, oy = y - cp.y + padA.t;
+    const cw = canvasW - padA.l - padA.r;
+    const autoY = p.AutomaticCanvasSize === 'Y' || p.AutomaticCanvasSize === 'XY';
+    const boxH = (autoY ? Math.max(canvasH, h) : canvasH) - padA.t - padA.b;
+    layoutInBox(node, ox, oy, cw, boxH);
+    if (autoY) {
+      let ext = 0;
+      if (node._contentSize) ext = node._contentSize.y;
+      else for (const ch of guiChildren(node)) if (ch.abs) ext = Math.max(ext, ch.abs.y + ch.abs.h - oy);
+      canvasH = Math.max(canvasH, ext + padA.t + padA.b);
+    }
+    return { canvasW, canvasH };
+  };
+  let res = doLayout(w);
+  const scrollable = res.canvasH > h + 0.5;
+  if (scrollable && (insetMode === 'ScrollBar' || insetMode === 'Always')) res = doLayout(w - thickness);
+  node._canvas = res;
+  node._scrollable = res.canvasH > h + 0.5;
+}
+
+function pathOf(node) {
+  const parts = [];
+  let n = node;
+  while (n) { parts.unshift(n.n); n = n._parent; }
+  return parts.slice(-5).join('/');
+}
+function linkParents(node, parent) {
+  node._parent = parent;
+  if (!Array.isArray(node.ch)) node.ch = node.ch ? Object.values(node.ch) : [];
+  if (!node.p || Array.isArray(node.p)) node.p = {};
+  for (const c of node.ch) linkParents(c, node);
+}
+
+// ------------------------------------------------------------------ rendering
+function gradientCss(grad, baseColor, baseTransparency) {
+  const cs = grad.p.Color, ts = grad.p.Transparency;
+  const times = new Set([0, 1]);
+  (cs && cs.k || []).forEach(k => times.add(k[0]));
+  (ts && ts.k || []).forEach(k => times.add(k[0]));
+  const sorted = [...times].sort((a, b) => a - b);
+  const sampleC = t => {
+    const k = cs.k; for (let i = 0; i < k.length - 1; i++) if (t >= k[i][0] && t <= k[i+1][0]) {
+      const f = (t - k[i][0]) / Math.max(1e-6, k[i+1][0] - k[i][0]);
+      return [0,1,2].map(j => k[i][j+1] + (k[i+1][j+1] - k[i][j+1]) * f);
+    }
+    return k[k.length-1].slice(1);
+  };
+  const sampleT = t => {
+    const k = ts.k; for (let i = 0; i < k.length - 1; i++) if (t >= k[i][0] && t <= k[i+1][0]) {
+      const f = (t - k[i][0]) / Math.max(1e-6, k[i+1][0] - k[i][0]);
+      return k[i][1] + (k[i+1][1] - k[i][1]) * f;
+    }
+    return k[k.length-1][1];
+  };
+  const stops = sorted.map(t => {
+    const g = sampleC(t), tr = sampleT(t);
+    const c = { r: baseColor.r * g[0], g: baseColor.g * g[1], b: baseColor.b * g[2] };
+    const alpha = (1 - baseTransparency) * (1 - tr);
+    return `${color(c, 1 - alpha)} ${(t*100).toFixed(2)}%`;
+  });
+  const angle = (grad.p.Rotation || 0) + 90;
+  return `linear-gradient(${angle}deg, ${stops.join(', ')})`;
+}
+
+function cornerRadius(node) {
+  const c = firstChild(node, 'UICorner');
+  if (!c) return 0;
+  const r = udim(c.p.CornerRadius, Math.min(node.abs.w, node.abs.h));
+  return Math.min(r, Math.min(node.abs.w, node.abs.h) / 2);
+}
+
+function richToHtml(text) {
+  const esc = s => s.replace(/&(?!(lt|gt|amp|quot|apos);)/g, '&amp;');
+  let html = esc(text)
+    .replace(/<br\s*\/?>/gi, '<br>')
+    .replace(/<b>/gi, '<span style="font-weight:700">').replace(/<\/b>/gi, '</span>')
+    .replace(/<i>/gi, '<span style="font-style:italic">').replace(/<\/i>/gi, '</span>')
+    .replace(/<font\s+([^>]*)>/gi, (m, attrs) => {
+      let style = '';
+      const col = attrs.match(/color\s*=\s*"([^"]+)"/i); if (col) style += `color:${col[1]};`;
+      const sz = attrs.match(/size\s*=\s*"(\d+)"/i); if (sz) style += `font-size:${sz[1] * FONT_SCALE}px;`;
+      return `<span style="${style}">`;
+    }).replace(/<\/font>/gi, '</span>');
+  return html;
+}
+function escapeHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function renderNode(node, parentAbs, debug) {
+  const p = node.p;
+  const el = document.createElement('div');
+  el.className = 'node';
+  const relX = node.abs.x - parentAbs.x, relY = node.abs.y - parentAbs.y;
+  el.style.left = relX + 'px'; el.style.top = relY + 'px';
+  el.style.width = Math.max(0, node.abs.w) + 'px'; el.style.height = Math.max(0, node.abs.h) + 'px';
+  el.dataset.name = node.n;
+  const scale = firstChild(node, 'UIScale');
+  const ap = p.AnchorPoint || { x: 0, y: 0 };
+  let transform = '';
+  if (scale && scale.p.Scale !== 1) transform += ` scale(${scale.p.Scale})`;
+  if (p.Rotation) transform += ` rotate(${p.Rotation}deg)`;
+  if (transform) { el.style.transform = transform; el.style.transformOrigin = `${ap.x*100}% ${ap.y*100}%`; }
+
+  const radius = cornerRadius(node);
+  const isCanvas = node.c === 'CanvasGroup';
+  if (isCanvas) el.style.opacity = String(1 - (p.GroupTransparency || 0));
+
+  // background
+  const bgT = p.BackgroundTransparency === undefined ? 0 : p.BackgroundTransparency;
+  const grad = node.ch.find(c => c.c === 'UIGradient' && c.p.Enabled !== false);
+  const stroke = node.ch.find(c => c.c === 'UIStroke' && c.p.Enabled !== false);
+  const bg = document.createElement('div');
+  bg.className = 'bg';
+  if (radius) bg.style.borderRadius = radius + 'px';
+  if (bgT < 1) bg.style.background = grad ? gradientCss(grad, p.BackgroundColor3, bgT) : color(p.BackgroundColor3, bgT);
+  const isTextObj = TEXT_CLASSES.has(node.c);
+  const strokeIsText = stroke && isTextObj && stroke.p.ApplyStrokeMode !== 'Border';
+  if (stroke && !strokeIsText) {
+    bg.style.boxShadow = `0 0 0 ${stroke.p.Thickness}px ${color(stroke.p.Color, stroke.p.Transparency)}`;
+  }
+  el.appendChild(bg);
+
+  // image
+  if ((node.c === 'ImageLabel' || node.c === 'ImageButton') && p.Image) {
+    const img = document.createElement('div');
+    img.className = 'bg';
+    if (radius) img.style.borderRadius = radius + 'px';
+    if (String(p.Image).startsWith('rbxthumb')) {
+      img.style.background = 'radial-gradient(circle at 50% 38%, #d9c9b6 0 20%, transparent 21%), radial-gradient(ellipse at 50% 100%, #6b7f99 0 45%, transparent 46%), linear-gradient(#b8c4d1, #8c9bad)';
+    } else {
+      img.style.background = 'repeating-linear-gradient(45deg,#777 0 6px,#999 6px 12px)';
+    }
+    img.style.opacity = String(1 - (p.ImageTransparency || 0));
+    el.appendChild(img);
+  }
+
+  // text
+  if (isTextObj) {
+    let text = p.Text || '';
+    let textColor = p.TextColor3, textTransp = p.TextTransparency || 0;
+    if (node.c === 'TextBox' && text === '' && p.PlaceholderText) { text = p.PlaceholderText; textColor = p.PlaceholderColor3; }
+    if (text !== '') {
+      const pad = paddingOf(node, node.abs.w, node.abs.h);
+      const boxW = node.abs.w - pad.l - pad.r, boxH = node.abs.h - pad.t - pad.b;
+      let size = p.TextSize || 14;
+      const measureP = Object.assign({}, p, { Text: text });
+      if (p.TextScaled) {
+        let lo = 1, hi = 100;
+        while (lo < hi) {
+          const mid = Math.ceil((lo + hi) / 2);
+          const b = textBounds(measureP, mid, p.TextWrapped ? boxW : undefined);
+          if (b.w <= boxW + 0.5 && b.h <= boxH + 0.5) lo = mid; else hi = mid - 1;
+        }
+        size = lo;
+      }
+      const t = document.createElement('div');
+      t.className = 'txt';
+      t.style.left = pad.l + 'px'; t.style.top = pad.t + 'px'; t.style.right = pad.r + 'px'; t.style.bottom = pad.b + 'px';
+      t.style.inset = `${pad.t}px ${pad.r}px ${pad.b}px ${pad.l}px`;
+      const ya = p.TextYAlignment || 'Center', xa = p.TextXAlignment || 'Center';
+      t.style.alignItems = ya === 'Top' ? 'flex-start' : ya === 'Bottom' ? 'flex-end' : 'center';
+      const span = document.createElement('span');
+      span.style.font = cssFont(p, size);
+      span.style.lineHeight = (size * (p.LineHeight || 1)) + 'px';
+      span.style.color = color(textColor, textTransp);
+      span.style.textAlign = xa === 'Left' ? 'left' : xa === 'Right' ? 'right' : 'center';
+      const wrapped = !!p.TextWrapped;
+      const truncate = p.TextTruncate === 'AtEnd' || p.TextTruncate === 'SplitWord';
+      span.style.whiteSpace = wrapped ? 'pre-wrap' : 'pre';
+      if (wrapped) span.style.overflowWrap = 'break-word';
+      if (truncate && !wrapped) { span.style.overflow = 'hidden'; span.style.textOverflow = 'ellipsis'; }
+      if (grad && bgT >= 1) {
+        span.style.background = gradientCss(grad, textColor, textTransp);
+        span.style.webkitBackgroundClip = 'text'; span.style.color = 'transparent';
+      }
+      if (p.RichText) span.innerHTML = richToHtml(text); else span.textContent = text;
+      t.appendChild(span);
+      el.appendChild(t);
+
+      // QA: overflow detection
+      const b = textBounds(measureP, size, wrapped ? boxW : undefined);
+      const visibleChain = true;
+      if (!p.TextScaled && visibleChain && textTransp < 0.99) {
+        const shown = node.c === 'TextBox' ? text : plainText(measureP);
+        if (!wrapped && b.w > boxW + 1.5) {
+          issues.push({ kind: truncate ? 'truncated' : 'overflow-x', path: pathOf(node), text: shown.slice(0, 80), need: Math.ceil(b.w), have: Math.floor(boxW) });
+          if (debug) el.classList.add('overflow-debug');
+        } else if (b.h > boxH + 1.5 && (wrapped || b.lines > 1)) {
+          issues.push({ kind: 'overflow-y', path: pathOf(node), text: shown.slice(0, 80), need: Math.ceil(b.h), have: Math.floor(boxH) });
+          if (debug) el.classList.add('overflow-debug');
+        }
+      }
+    }
+  }
+
+  // children container (clipping)
+  const clip = document.createElement('div');
+  clip.className = 'clip';
+  const clips = p.ClipsDescendants || node.c === 'ScrollingFrame' || isCanvas;
+  if (clips) {
+    clip.style.overflow = 'hidden';
+    if (isCanvas && radius) clip.style.borderRadius = radius + 'px';
+  }
+  el.appendChild(clip);
+  const kids = guiChildren(node).map((n, i) => ({ n, i })).sort((a, b) => ((a.n.p.ZIndex || 1) - (b.n.p.ZIndex || 1)) || (a.i - b.i)).map(x => x.n);
+  for (const k of kids) if (k.abs) clip.appendChild(renderNode(k, node.abs, debug));
+
+  // scrollbar
+  if (node.c === 'ScrollingFrame' && node._scrollable && (p.ScrollBarThickness || 0) > 0) {
+    const cv = node._canvas;
+    const cp = p.CanvasPosition || { x: 0, y: 0 };
+    const bar = document.createElement('div');
+    const thumbH = Math.max(20, node.abs.h * node.abs.h / cv.canvasH);
+    const top = (cp.y / Math.max(1, cv.canvasH - node.abs.h)) * (node.abs.h - thumbH);
+    bar.style.cssText = `position:absolute;right:0;top:${top}px;width:${p.ScrollBarThickness}px;height:${thumbH}px;border-radius:${p.ScrollBarThickness/2}px;background:${color(p.ScrollBarImageColor3, p.ScrollBarImageTransparency || 0)}`;
+    el.appendChild(bar);
+  }
+  return el;
+}
+
+window.renderScene = function (data, opts) {
+  opts = opts || {};
+  issues.length = 0;
+  const root = document.getElementById('root');
+  root.innerHTML = '';
+  const vp = data.viewport;
+  document.body.style.width = vp.x + 'px'; document.body.style.height = vp.y + 'px';
+  const tree = data.tree;
+  linkParents(tree, null);
+  const guis = tree.ch.map((n, i) => ({ n, i }))
+    .filter(x => x.n.c === 'ScreenGui' && x.n.p.Enabled !== false)
+    .sort((a, b) => ((a.n.p.DisplayOrder || 0) - (b.n.p.DisplayOrder || 0)) || (a.i - b.i)).map(x => x.n);
+  for (const gui of guis) {
+    const inset = gui.p.IgnoreGuiInset ? 0 : data.topInset;
+    gui.abs = { x: 0, y: inset, w: vp.x, h: vp.y - inset };
+    layoutInBox(gui, 0, inset, vp.x, vp.y - inset);
+    const layer = document.createElement('div');
+    layer.className = 'node';
+    layer.style.left = '0px'; layer.style.top = inset + 'px'; layer.style.width = vp.x + 'px'; layer.style.height = (vp.y - inset) + 'px';
+    layer.dataset.name = gui.n;
+    const kids = guiChildren(gui).map((n, i) => ({ n, i })).sort((a, b) => ((a.n.p.ZIndex || 1) - (b.n.p.ZIndex || 1)) || (a.i - b.i)).map(x => x.n);
+    for (const k of kids) layer.appendChild(renderNode(k, gui.abs, opts.debug));
+    root.appendChild(layer);
+  }
+  return issues.slice();
+};
+
+// Query layout rectangle of a named node (for crops): returns {x,y,w,h} of first match
+window.findRect = function (name) {
+  const el = document.querySelector(`[data-name="${name}"]`);
+  if (!el) return null;
+  const r = el.getBoundingClientRect();
+  return { x: r.left, y: r.top, w: r.width, h: r.height };
+};
+</script>
+</body>
+</html>
