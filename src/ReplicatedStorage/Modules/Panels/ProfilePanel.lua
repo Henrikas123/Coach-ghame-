@@ -6,6 +6,7 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 
 local Modules = ReplicatedStorage:WaitForChild("Modules")
 local DataSchema = require(Modules:WaitForChild("DataSchema"))
@@ -35,18 +36,20 @@ function ProfilePanel.create(Kit, State)
 		subtitle = "Karjera, reputacija ir pasiekimai",
 		icon = "👤",
 		accent = "gold",
-		maxSize = Vector2.new(760, 560),
+		maxSize = Vector2.new(760, 680),
 	})
 
 	local scroll = Kit.scroll({
 		parent = panel.Body,
 		name = "Content",
+		size = UDim2.new(1, -8, 1, -10),
 		paddingTop = 16,
 		paddingBottom = 20,
 		paddingLeft = 20,
-		paddingRight = 16,
-		spacing = 14,
+		paddingRight = 8,
+		spacing = 16,
 	})
+	Kit.scrollFade(scroll)
 
 	-- ========================================================
 	-- HERO KORTELE
@@ -54,7 +57,7 @@ function ProfilePanel.create(Kit, State)
 	local hero = Kit.card({
 		parent = scroll,
 		name = "Hero",
-		size = UDim2.new(1, 0, 0, 128),
+		size = UDim2.new(1, 0, 0, 136),
 		order = 1,
 		gradientTop = C.bgCardLight,
 		gradientBottom = C.bgCard,
@@ -62,7 +65,7 @@ function ProfilePanel.create(Kit, State)
 		strokeTransparency = 0.6,
 	})
 
-	local avatarFrame = Kit.avatar({
+	local avatarFrame, _, _ = Kit.avatar({
 		parent = hero,
 		text = player.DisplayName,
 		size = 88,
@@ -106,25 +109,39 @@ function ProfilePanel.create(Kit, State)
 		size = UDim2.new(1, -300, 0, 18),
 		position = UDim2.new(0, 126, 0, 45),
 	})
+	-- Zvaigzdes + lygio zyme vienoje eiluteje (zyme seka iskart po zvaigzdziu)
+	local tierRow = Kit.create("Frame", {
+		Name = "TierRow",
+		BackgroundTransparency = 1,
+		Size = UDim2.new(1, -300, 0, 22),
+		Position = UDim2.new(0, 126, 0, 68),
+		Parent = hero,
+	})
+	Kit.list(tierRow, 8, Enum.FillDirection.Horizontal, Enum.HorizontalAlignment.Left, Enum.VerticalAlignment.Center)
 	local starsLabel = Kit.label({
-		parent = hero,
+		parent = tierRow,
 		name = "Stars",
 		text = Kit.stars(1),
 		bold = true,
 		textSize = 18,
 		color = C.gold,
-		size = UDim2.new(0, 96, 0, 22),
-		position = UDim2.new(0, 126, 0, 68),
+		size = UDim2.new(0, 0, 0, 22),
+		autoSize = Enum.AutomaticSize.X,
+		order = 1,
 	})
-	local tierLabel = Kit.label({
-		parent = hero,
+	starsLabel.TextTruncate = Enum.TextTruncate.None
+	local _, tierLabel = Kit.badge({
+		parent = tierRow,
 		name = "Tier",
 		text = "Vietinis treneris",
-		bold = true,
-		textSize = 14,
-		color = C.goldBright,
-		size = UDim2.new(0.5, -120, 0, 22),
-		position = UDim2.new(0, 226, 0, 68),
+		color = C.gold,
+		order = 2,
+	})
+	local repBar = Kit.progressBar({
+		parent = hero,
+		name = "ReputationBar",
+		size = UDim2.new(1, -146, 0, 8),
+		position = UDim2.new(0, 126, 0, 98),
 	})
 	local progressCaption = Kit.label({
 		parent = hero,
@@ -132,16 +149,8 @@ function ProfilePanel.create(Kit, State)
 		text = "",
 		textSize = 12,
 		color = C.textSecondary,
-		align = Enum.TextXAlignment.Right,
-		size = UDim2.new(0.5, -40, 0, 22),
-		position = UDim2.new(1, -20, 0, 68),
-		anchor = Vector2.new(1, 0),
-	})
-	local repBar = Kit.progressBar({
-		parent = hero,
-		name = "ReputationBar",
-		size = UDim2.new(1, -146, 0, 8),
-		position = UDim2.new(0, 126, 0, 98),
+		size = UDim2.new(1, -146, 0, 16),
+		position = UDim2.new(0, 126, 0, 110),
 	})
 
 	Kit.label({
@@ -161,7 +170,7 @@ function ProfilePanel.create(Kit, State)
 		name = "RepValue",
 		text = "0",
 		bold = true,
-		textSize = 30,
+		textSize = 28,
 		color = C.goldBright,
 		align = Enum.TextXAlignment.Right,
 		size = UDim2.new(0, 160, 0, 34),
@@ -243,12 +252,25 @@ function ProfilePanel.create(Kit, State)
 			Position = UDim2.new((index - 1) * 0.2, 0, 0, 16),
 			Parent = careerCard,
 		})
+		-- Pulsuojantis "halo" aplink dabartini lygi (rodomas tik current mazgui)
+		local halo = Kit.create("Frame", {
+			Name = "Halo",
+			BackgroundTransparency = 1,
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Size = UDim2.new(0, 48, 0, 48),
+			Position = UDim2.new(0.5, 0, 0, 19),
+			Visible = false,
+			Parent = column,
+		})
+		Kit.corner(halo, UDim.new(1, 0))
+		local haloStroke = Kit.stroke(halo, C.goldBright, 2, 0.4)
 		local node = Kit.create("Frame", {
 			Name = "Node",
 			BackgroundColor3 = C.bgCardLight,
 			AnchorPoint = Vector2.new(0.5, 0),
 			Size = UDim2.new(0, 38, 0, 38),
 			Position = UDim2.new(0.5, 0, 0, 0),
+			ZIndex = 2,
 			Parent = column,
 		})
 		Kit.corner(node, UDim.new(1, 0))
@@ -262,6 +284,7 @@ function ProfilePanel.create(Kit, State)
 			color = C.textSecondary,
 			align = Enum.TextXAlignment.Center,
 			size = UDim2.new(1, 0, 1, 0),
+			zIndex = 3,
 		})
 		local nameLabel = Kit.label({
 			parent = column,
@@ -278,13 +301,16 @@ function ProfilePanel.create(Kit, State)
 			parent = column,
 			name = "StepSub",
 			text = "",
-			textSize = 11,
+			textSize = 12,
 			color = C.textSecondary,
 			align = Enum.TextXAlignment.Center,
-			size = UDim2.new(1, -8, 0, 14),
+			size = UDim2.new(1, -8, 0, 16),
 			position = UDim2.new(0, 4, 0, 64),
 		})
-		stepNodes[index] = { node = node, stroke = nodeStroke, glyph = nodeText, name = nameLabel, sub = subLabel }
+		stepNodes[index] = {
+			node = node, stroke = nodeStroke, glyph = nodeText, name = nameLabel, sub = subLabel,
+			halo = halo, haloStroke = haloStroke,
+		}
 	end
 	local careerFooter = Kit.label({
 		parent = careerCard,
@@ -348,11 +374,11 @@ function ProfilePanel.create(Kit, State)
 			name = "Name",
 			text = Kit.displayName(tournament.name),
 			bold = true,
-			textSize = 12,
+			textSize = 13,
 			wrap = true,
 			align = Enum.TextXAlignment.Center,
 			alignY = Enum.TextYAlignment.Top,
-			size = UDim2.new(1, -12, 0, 30),
+			size = UDim2.new(1, -12, 0, 32),
 			position = UDim2.new(0, 6, 0, 56),
 		})
 		local status = Kit.label({
@@ -360,13 +386,28 @@ function ProfilePanel.create(Kit, State)
 			name = "Status",
 			text = "",
 			bold = true,
-			textSize = 11,
+			textSize = 12,
 			color = C.textSecondary,
+			rich = true,
 			align = Enum.TextXAlignment.Center,
 			size = UDim2.new(1, -12, 0, 16),
 			position = UDim2.new(0, 6, 1, -26),
 		})
-		trophySlots[index] = { slot = slot, stroke = slotStroke, cup = cup, lock = lock, status = status, tournament = tournament }
+		local countBadge, countText = Kit.badge({
+			parent = slot,
+			name = "Count",
+			text = "×1",
+			color = C.gold,
+			solid = true,
+			height = 20,
+			anchor = Vector2.new(1, 0),
+			position = UDim2.new(1, -8, 0, 8),
+		})
+		countBadge.Visible = false
+		trophySlots[index] = {
+			slot = slot, stroke = slotStroke, cup = cup, lock = lock, status = status, tournament = tournament,
+			countBadge = countBadge, countText = countText,
+		}
 	end
 
 	-- ========================================================
@@ -420,7 +461,6 @@ function ProfilePanel.create(Kit, State)
 		starsLabel.Text = Kit.stars(rep.stars or 1)
 		tierLabel.Text = Kit.translate("tiers", rep.tierName)
 		repValue.Text = Kit.formatNumber(rep.reputacija or 0)
-		panel.SetSubtitle(string.format("%s  •  %s", Kit.translate("tiers", rep.tierName), academy.academyName or AcademyConfig.DefaultName))
 
 		local current = rep.reputacija or 0
 		local tiers = DataSchema.CoachReputationTiers
@@ -463,7 +503,7 @@ function ProfilePanel.create(Kit, State)
 		tiles.followers.Set(Kit.formatNumber(s.marketing.followers or 0), "Socialiniai tinklai")
 		tiles.sponsors.Set(
 			string.format("%d / %d", #(s.sponsor.sponsors or {}), SponsorConfig.MaxActiveSponsors),
-			string.format("Personalas: %d", #(s.staff or {}))
+			"Aktyvūs kontraktai"
 		)
 	end
 
@@ -471,13 +511,17 @@ function ProfilePanel.create(Kit, State)
 		local reached = summary.bestTier -- 0 = dar nera kovojanciu kovotoju
 		for index, step in ipairs(CAREER_STEPS) do
 			local nodeInfo = stepNodes[index]
-			local isReached = step.ladderIndex ~= nil and step.ladderIndex <= reached
+			local isReached = step.ladderIndex ~= nil and step.ladderIndex < reached
 			local isCurrent = step.ladderIndex ~= nil and step.ladderIndex == reached
+			local isNextGoal = step.ladderIndex ~= nil and step.ladderIndex == reached + 1
+			nodeInfo.halo.Visible = isCurrent
+			nodeInfo.glyph.TextTransparency = 0
 			if isCurrent then
-				nodeInfo.node.BackgroundColor3 = C.gold
+				-- dabartinis lygis: numeris ant goldBright + pulsuojantis halo
+				nodeInfo.node.BackgroundColor3 = C.goldBright
 				nodeInfo.stroke.Color = C.goldBright
 				nodeInfo.stroke.Transparency = 0
-				nodeInfo.glyph.Text = step.icon
+				nodeInfo.glyph.Text = tostring(index)
 				nodeInfo.glyph.TextColor3 = C.textOnGold
 				nodeInfo.name.TextColor3 = C.goldBright
 			elseif isReached then
@@ -487,21 +531,33 @@ function ProfilePanel.create(Kit, State)
 				nodeInfo.glyph.Text = "✓"
 				nodeInfo.glyph.TextColor3 = C.textOnGold
 				nodeInfo.name.TextColor3 = C.textPrimary
+			elseif isNextGoal then
+				nodeInfo.node.BackgroundColor3 = C.bgCardLight
+				nodeInfo.stroke.Color = C.gold
+				nodeInfo.stroke.Transparency = 0
+				nodeInfo.glyph.Text = tostring(index)
+				nodeInfo.glyph.TextColor3 = C.gold
+				nodeInfo.name.TextColor3 = C.textPrimary
 			else
 				nodeInfo.node.BackgroundColor3 = C.bgCardLight
 				nodeInfo.stroke.Color = C.border
 				nodeInfo.stroke.Transparency = 0
 				nodeInfo.glyph.Text = step.ladderIndex and tostring(index) or "🔒"
+				nodeInfo.glyph.TextTransparency = step.ladderIndex and 0 or 0.4
 				nodeInfo.glyph.TextColor3 = C.textSecondary
 				nodeInfo.name.TextColor3 = C.textSecondary
 			end
 
+			nodeInfo.sub.TextColor3 = C.textSecondary
 			if step.ladderIndex then
 				local count = summary.tierCounts[step.ladderIndex] or 0
 				if count > 0 then
 					nodeInfo.sub.Text = string.format("%d %s", count, count == 1 and "kovotojas" or "kovotojai")
 				elseif isReached then
 					nodeInfo.sub.Text = "Pereita"
+				elseif isNextGoal then
+					nodeInfo.sub.Text = "Kitas tikslas"
+					nodeInfo.sub.TextColor3 = C.gold
 				else
 					nodeInfo.sub.Text = "Užrakinta"
 				end
@@ -530,7 +586,7 @@ function ProfilePanel.create(Kit, State)
 		end
 	end
 
-	local function renderTrophies(s)
+	local function renderTrophies(s, summary)
 		local stars = s.reputation.stars or 1
 		local trophies = s.stats.trophies or {}
 		local earnedTotal = 0
@@ -539,24 +595,28 @@ function ProfilePanel.create(Kit, State)
 			local count = trophies[tournament.name] or 0
 			earnedTotal += count
 			local unlocked = stars >= (tournament.minStars or 1)
+			slotInfo.countBadge.Visible = count > 0
 			if count > 0 then
 				slotInfo.cup.TextTransparency = 0
 				slotInfo.lock.Visible = false
 				slotInfo.stroke.Color = C.gold
 				slotInfo.stroke.Transparency = 0.25
-				slotInfo.status.Text = string.format("× %d", count)
+				slotInfo.countText.Text = string.format("×%d", count)
+				slotInfo.status.Text = "Iškovota"
 				slotInfo.status.TextColor3 = C.goldBright
 			else
 				slotInfo.cup.TextTransparency = unlocked and 0.55 or 0.8
 				slotInfo.lock.Visible = not unlocked
 				slotInfo.stroke.Color = C.border
 				slotInfo.stroke.Transparency = 0.45
-				slotInfo.status.Text = unlocked and "Neiškovota" or ("Reikia " .. string.rep("★", tournament.minStars or 1))
-				slotInfo.status.TextColor3 = unlocked and C.textSecondary or C.gold
+				slotInfo.status.TextColor3 = C.textSecondary
+				slotInfo.status.Text = unlocked and "Neiškovota"
+					or string.format("Reikia <font color=\"#D4AF37\">%s</font>", string.rep("★", tournament.minStars or 1))
 			end
 		end
 		if trophyHint then
-			trophyHint.Text = string.format("Iškovota: %d", earnedTotal)
+			-- trofejai pagal pavadinima skaiciuojami nuo sio atnaujinimo; bendras skaicius -- is kovotoju
+			trophyHint.Text = string.format("Iškovota: %d", math.max(earnedTotal, summary and summary.champs or 0))
 		end
 	end
 
@@ -566,7 +626,7 @@ function ProfilePanel.create(Kit, State)
 		renderHero(s)
 		renderTiles(s, summary)
 		renderCareer(summary)
-		renderTrophies(s)
+		renderTrophies(s, summary)
 	end
 
 	local renderQueued = false
@@ -584,15 +644,44 @@ function ProfilePanel.create(Kit, State)
 	end
 
 	State.subscribe("any", queueRender)
+
+	-- Dabartinio karjeros lygio halo pulsavimas (tik kol panele atidaryta)
+	local pulseTweens = {}
+	local function startPulse()
+		for _, nodeInfo in ipairs(stepNodes) do
+			nodeInfo.halo.Size = UDim2.new(0, 48, 0, 48)
+			nodeInfo.haloStroke.Transparency = 0.4
+			local info = TweenInfo.new(1.4, Enum.EasingStyle.Sine, Enum.EasingDirection.Out, -1)
+			local grow = TweenService:Create(nodeInfo.halo, info, { Size = UDim2.new(0, 60, 0, 60) })
+			local fade = TweenService:Create(nodeInfo.haloStroke, info, { Transparency = 1 })
+			grow:Play()
+			fade:Play()
+			table.insert(pulseTweens, grow)
+			table.insert(pulseTweens, fade)
+		end
+	end
+	local function stopPulse()
+		for _, tweenObject in ipairs(pulseTweens) do
+			tweenObject:Cancel()
+		end
+		table.clear(pulseTweens)
+	end
+
 	panel.OnOpen(function()
 		render()
 		State.refresh()
+		startPulse()
 	end)
+	panel.OnClose(stopPulse)
 
-	-- Plyteliu tinklelis: siauresniame lange 2 stulpeliai vietoj 4
+	-- Plyteliu tinklelis: siauresniame lange 2 stulpeliai vietoj 4; kompaktiskai -- zemesnes plyteles be paaiskinimu
 	panel.OnLayout(function(layout)
 		local columns = layout.size.X < 600 and 2 or 4
-		statsLayout.CellSize = UDim2.new(1 / columns, -math.ceil(12 * (columns - 1) / columns) - 1, 0, 80)
+		local tileHeight = layout.compact and 64 or 80
+		statsLayout.CellSize = UDim2.new(1 / columns, -math.ceil(12 * (columns - 1) / columns) - 1, 0, tileHeight)
+		for _, tile in pairs(tiles) do
+			tile.Sub.Visible = not layout.compact
+		end
 	end)
 
 	return panel

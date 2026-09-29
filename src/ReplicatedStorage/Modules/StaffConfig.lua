@@ -20,7 +20,7 @@ StaffConfig.Roles = {
 	},
 	StrengthCoach = {
 		label = "Jėgos treneris",
-		description = "+20% naudos iš Power ir Defense treniruočių",
+		description = "+20% naudos iš jėgos ir gynybos treniruočių",
 		hireCost = 200,
 		salary = 15, -- $ kas atlyginimo periodą (žr. PayrollIntervalSeconds)
 		focus = { "Power", "Defense" },
@@ -28,7 +28,7 @@ StaffConfig.Roles = {
 	},
 	SpeedCoach = {
 		label = "Greičio treneris",
-		description = "+20% naudos iš Speed ir Technique treniruočių",
+		description = "+20% naudos iš greičio ir technikos treniruočių",
 		hireCost = 200,
 		salary = 15,
 		focus = { "Speed", "Technique" },

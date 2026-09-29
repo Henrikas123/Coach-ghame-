@@ -8,9 +8,13 @@ if [ $# -eq 0 ]; then
 fi
 fail=0
 for s in "$@"; do
-  out=$(timeout 180 lune run run.luau "$s" 2>&1 | grep -v "DataStore nepasiekiamas")
-  echo "$out" | grep -E "ERROR|CHECK|errors" | head -20
-  echo "$out" | grep -q "CHECK FAILED\|\[ERROR\]" && fail=1
+  out=$(timeout 180 lune run run.luau "$s" 2>&1)
+  code=$?
+  echo "$out" | grep -v "DataStore nepasiekiamas" | grep -E "ERROR|CHECK|errors|Stack Begin|findPath|attempt to" | head -20
+  if [ $code -ne 0 ] || echo "$out" | grep -q "CHECK FAILED\|\[ERROR\]"; then
+    echo "!! $s FAILED (exit $code)"
+    fail=1
+  fi
 done
 PLAYWRIGHT_PATH=${PLAYWRIGHT_PATH:-$(npm root -g)/playwright} timeout 900 node shoot.js "$@"
 exit $fail

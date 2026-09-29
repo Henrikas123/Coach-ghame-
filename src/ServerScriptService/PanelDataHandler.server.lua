@@ -77,9 +77,18 @@ local function buildSnapshot(player)
 	}
 end
 
+-- Ribojimas: daznesnes nei kas 0.3 s uzklausos gauna ka tik sudaryta snapshot (apsauga nuo spam)
+local MIN_INTERVAL = 0.3
+local lastSnapshot = {} -- [player] = { at = os.clock(), data = snapshot }
+
 PanelSnapshot.OnServerInvoke = function(player)
+	local cached = lastSnapshot[player]
+	if cached and os.clock() - cached.at < MIN_INTERVAL then
+		return cached.data
+	end
 	local ok, result = pcall(buildSnapshot, player)
 	if ok then
+		lastSnapshot[player] = { at = os.clock(), data = result }
 		return result
 	end
 	warn("PanelDataHandler: nepavyko sudaryti snapshot zaidejui", player.Name, result)
@@ -113,6 +122,7 @@ end)
 
 Players.PlayerRemoving:Connect(function(player)
 	lastBalance[player] = nil
+	lastSnapshot[player] = nil
 end)
 
 print("PanelDataHandler paruoštas.")

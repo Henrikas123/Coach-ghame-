@@ -426,6 +426,42 @@ local function bindLiveData(player, moneyLabel, repLabel, starsLabel)
 		end
 	end)
 
+	-- HUD paneliu ClientState (jei idiegtas): patikimas pinigu/reputacijos saltinis, nepriklausantis nuo
+	-- to, kuris LocalScript pirmas "pagavo" pradinius serverio pranesimus (RemoteEvent eile).
+	task.spawn(function()
+		local modules = game:GetService("ReplicatedStorage"):FindFirstChild("Modules")
+		local panels = modules and modules:WaitForChild("Panels", 10)
+		local stateModule = panels and panels:WaitForChild("ClientState", 10)
+		if not stateModule then
+			return
+		end
+		local ok, ClientState = pcall(require, stateModule)
+		if not ok or type(ClientState) ~= "table" or not ClientState.subscribe then
+			return
+		end
+		local function renderMoney(state)
+			if type(state.money) == "number" then
+				moneyLabel.Text = "$ " .. tostring(state.money)
+			end
+		end
+		local function renderReputation(state)
+			local rep = state.reputation
+			if rep and rep.tierName then
+				repLabel.Text = REPUTATION_TIER_LT[rep.tierName] or rep.tierName
+			end
+			if rep and rep.stars then
+				starsLabel.Text = starString(rep.stars)
+			end
+		end
+		ClientState.subscribe("money", renderMoney)
+		ClientState.subscribe("reputation", renderReputation)
+		local current = ClientState.get()
+		if current.loaded then
+			renderMoney(current)
+			renderReputation(current)
+		end
+	end)
+
 	local remotes = game:GetService("ReplicatedStorage"):FindFirstChild("Remotes")
 	local reputationUpdate = remotes and remotes:FindFirstChild("ReputationUpdate")
 	if reputationUpdate then

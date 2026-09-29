@@ -21,6 +21,8 @@ local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local GuiService = game:GetService("GuiService")
 local Workspace = game:GetService("Workspace")
+local UserInputService = game:GetService("UserInputService")
+local ContextActionService = game:GetService("ContextActionService")
 
 local PanelKit = {}
 
@@ -60,7 +62,7 @@ local BUTTON_VARIANTS = {
 	gold    = { base = C.gold,        hover = C.goldBright,    text = C.textOnGold,  stroke = C.goldBright },
 	steel   = { base = C.steel,       hover = C.steelBright,   text = C.textPrimary, stroke = C.steelBright },
 	crimson = { base = C.crimson,     hover = C.crimsonBright, text = C.textPrimary, stroke = C.crimsonBright },
-	ghost   = { base = C.bgCardLight, hover = C.bgCardLight,   text = C.textPrimary, stroke = C.border, hoverStroke = C.gold },
+	ghost   = { base = C.bgCardLight, hover = C.bgCardLight,   text = C.textPrimary, stroke = C.border, hoverStroke = C.gold, idleStrokeTransparency = 0 },
 }
 PanelKit.ButtonVariants = BUTTON_VARIANTS
 
@@ -85,6 +87,12 @@ function PanelKit.tween(instance, duration, props, style, direction)
 	return tween
 end
 local tween = PanelKit.tween
+
+-- Lieciamuose ekranuose MouseEnter/MouseLeave nepatikimi -- hover efektu nerodome
+local function isTouchOnly()
+	return UserInputService.TouchEnabled and not UserInputService.MouseEnabled
+end
+PanelKit.isTouchOnly = isTouchOnly
 
 -- create("Frame", { Size = ..., Parent = ... }) -- Parent priskiriamas paskutinis
 function PanelKit.create(className, props)
@@ -149,13 +157,15 @@ function PanelKit.list(parent, spacing, direction, hAlign, vAlign)
 end
 local list = PanelKit.list
 
+-- Pastaba: CellSize offset'ai turi 1px atsarga (float apvalinimas neturi "numesti" paskutinio stulpelio),
+-- todel tinklelis centruojamas -- atsarga pasiskirsto per abu krastus ir lygiavimas islieka.
 function PanelKit.grid(parent, cellSize, cellPadding)
 	return create("UIGridLayout", {
 		CellSize = cellSize,
 		CellPadding = cellPadding or UDim2.new(0, 10, 0, 10),
 		SortOrder = Enum.SortOrder.LayoutOrder,
 		FillDirection = Enum.FillDirection.Horizontal,
-		HorizontalAlignment = Enum.HorizontalAlignment.Left,
+		HorizontalAlignment = Enum.HorizontalAlignment.Center,
 		VerticalAlignment = Enum.VerticalAlignment.Top,
 		Parent = parent,
 	})
@@ -271,8 +281,10 @@ function PanelKit.button(props)
 	})
 	local scale = create("UIScale", { Scale = 1, Parent = btn })
 
+	local currentText = props.text or ""
 	local function composeText(text)
-		if props.icon and props.icon ~= "" then
+		-- ikona rodoma tik aktyviam mygtukui (isjungtas turi atrodyti "tylus")
+		if enabled and props.icon and props.icon ~= "" then
 			return props.icon .. "  " .. text
 		end
 		return text
@@ -281,7 +293,7 @@ function PanelKit.button(props)
 	local textLabel = label({
 		parent = btn,
 		name = "Text",
-		text = composeText(props.text or ""),
+		text = composeText(currentText),
 		bold = true,
 		textSize = props.textSize or 14,
 		color = variant.text,
@@ -291,31 +303,41 @@ function PanelKit.button(props)
 	})
 
 	local function paint(instant)
-		local bgColor, textColor, strokeColor, strokeTransparency
+		local bgColor, bgTransparency, textColor, textTransparency, strokeColor, strokeTransparency
 		if not enabled then
-			bgColor, textColor, strokeColor, strokeTransparency = C.bgCardLight, C.textSecondary, C.border, 0.5
+			bgColor, bgTransparency = C.bgCardLight, 0.5
+			textColor, textTransparency = C.textSecondary, 0.35
+			strokeColor, strokeTransparency = C.border, 0.8
 		elseif hovering then
-			bgColor = variant.hover
-			textColor = variant.text
+			bgColor, bgTransparency = variant.hover, 0
+			textColor, textTransparency = variant.text, 0
 			strokeColor = variant.hoverStroke or variant.stroke
 			strokeTransparency = variant.hoverStroke and 0.1 or 0.35
 		else
-			bgColor, textColor, strokeColor, strokeTransparency = variant.base, variant.text, variant.stroke, 0.55
+			bgColor, bgTransparency = variant.base, 0
+			textColor, textTransparency = variant.text, 0
+			strokeColor, strokeTransparency = variant.stroke, variant.idleStrokeTransparency or 0.55
 		end
 		sheen.Enabled = enabled
+		textLabel.Text = composeText(currentText)
 		if instant then
 			btn.BackgroundColor3 = bgColor
+			btn.BackgroundTransparency = bgTransparency
 			textLabel.TextColor3 = textColor
+			textLabel.TextTransparency = textTransparency
 			btnStroke.Color = strokeColor
 			btnStroke.Transparency = strokeTransparency
 		else
-			tween(btn, 0.14, { BackgroundColor3 = bgColor })
-			tween(textLabel, 0.14, { TextColor3 = textColor })
+			tween(btn, 0.14, { BackgroundColor3 = bgColor, BackgroundTransparency = bgTransparency })
+			tween(textLabel, 0.14, { TextColor3 = textColor, TextTransparency = textTransparency })
 			tween(btnStroke, 0.14, { Color = strokeColor, Transparency = strokeTransparency })
 		end
 	end
 
 	btn.MouseEnter:Connect(function()
+		if isTouchOnly() then
+			return
+		end
 		hovering = true
 		paint(false)
 	end)
@@ -327,12 +349,25 @@ function PanelKit.button(props)
 	btn.MouseButton1Down:Connect(function()
 		if enabled then
 			tween(scale, 0.06, { Scale = 0.94 })
+			-- jei paspaudimas virsta slinkimu (ScrollingFrame), MouseButton1Up gali neateiti
+			task.delay(0.4, function()
+				if scale.Scale < 1 then
+					tween(scale, 0.14, { Scale = 1 }, Enum.EasingStyle.Back)
+				end
+			end)
 		end
 	end)
 	btn.MouseButton1Up:Connect(function()
 		tween(scale, 0.14, { Scale = 1 }, Enum.EasingStyle.Back)
 	end)
+	-- Apsauga nuo dvigubo paspaudimo: kol serveris atsako, antras paspaudimas ignoruojamas
+	local lastActivated = -math.huge
 	btn.Activated:Connect(function()
+		local now = os.clock()
+		if now - lastActivated < (props.debounce or 0.5) then
+			return
+		end
+		lastActivated = now
 		if enabled and props.onClick then
 			props.onClick()
 		end
@@ -350,6 +385,7 @@ function PanelKit.button(props)
 		paint(false)
 	end
 	function handle.SetText(text)
+		currentText = text
 		textLabel.Text = composeText(text)
 	end
 	function handle.SetVariant(name)
@@ -397,6 +433,9 @@ function PanelKit.iconButton(props)
 	local hoverColor = props.hoverColor or C.crimson
 	local baseColor = props.color or C.bgCardLight
 	btn.MouseEnter:Connect(function()
+		if isTouchOnly() then
+			return
+		end
 		tween(btn, 0.12, { BackgroundColor3 = hoverColor })
 		tween(glyph, 0.12, { TextColor3 = C.textPrimary })
 		tween(btnStroke, 0.12, { Color = props.hoverStrokeColor or C.crimsonBright, Transparency = 0.2 })
@@ -503,7 +542,7 @@ function PanelKit.badge(props)
 		Name = props.name or "Badge",
 		BackgroundColor3 = tone,
 		BackgroundTransparency = solid and 0 or 0.82,
-		Size = UDim2.new(0, 0, 0, props.height or 20),
+		Size = UDim2.new(0, 0, 0, props.height or 22),
 		AutomaticSize = Enum.AutomaticSize.X,
 		Position = props.position or UDim2.new(),
 		AnchorPoint = props.anchor or Vector2.new(0, 0),
@@ -518,7 +557,7 @@ function PanelKit.badge(props)
 		name = "Text",
 		text = props.text or "",
 		bold = true,
-		textSize = props.textSize or 11,
+		textSize = props.textSize or 12,
 		color = props.textColor or (solid and C.textOnGold or tone),
 		align = Enum.TextXAlignment.Center,
 		size = UDim2.new(0, 0, 1, 0),
@@ -601,7 +640,7 @@ function PanelKit.statTile(props)
 		parent = tile,
 		name = "Caption",
 		text = props.label or "",
-		textSize = 12,
+		textSize = 13,
 		color = C.textSecondary,
 		size = UDim2.new(1, -22, 0, 16),
 		position = UDim2.new(0, 22, 0, 0),
@@ -614,16 +653,16 @@ function PanelKit.statTile(props)
 		textSize = props.valueSize or 22,
 		color = props.accent or C.textPrimary,
 		size = UDim2.new(1, 0, 0, 26),
-		position = UDim2.new(0, 0, 0, 20),
+		position = UDim2.new(0, 0, 0, 18),
 	})
 	local sub = label({
 		parent = tile,
 		name = "Sub",
 		text = props.sub or "",
-		textSize = 11,
+		textSize = 12,
 		color = C.textSecondary,
-		size = UDim2.new(1, 0, 0, 14),
-		position = UDim2.new(0, 0, 1, -14),
+		size = UDim2.new(1, 0, 0, 16),
+		position = UDim2.new(0, 0, 1, -16),
 	})
 	local handle = { Instance = tile, Value = value, Sub = sub }
 	function handle.Set(valueText, subText, color)
@@ -732,7 +771,7 @@ function PanelKit.scroll(props)
 		ScrollingDirection = Enum.ScrollingDirection.Y,
 		ScrollBarThickness = 4,
 		ScrollBarImageColor3 = C.gold,
-		ScrollBarImageTransparency = 0.45,
+		ScrollBarImageTransparency = 0.6,
 		VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar,
 		ElasticBehavior = Enum.ElasticBehavior.WhenScrollable,
 		LayoutOrder = props.order or 0,
@@ -745,6 +784,40 @@ function PanelKit.scroll(props)
 		list(frame, props.spacing or 10)
 	end
 	return frame
+end
+
+-- "Dar yra zemiau" uzuomina: gradientas slenkamos srities apacioje (dingsta pasiekus gala)
+function PanelKit.scrollFade(scroll, color)
+	local fade = create("Frame", {
+		Name = scroll.Name .. "Fade",
+		BackgroundColor3 = color or C.bg,
+		Active = false,
+		Visible = false,
+		ZIndex = scroll.ZIndex + 5,
+		Parent = scroll.Parent,
+	})
+	create("UIGradient", {
+		Rotation = 90,
+		Transparency = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 1),
+			NumberSequenceKeypoint.new(1, 0),
+		}),
+		Parent = fade,
+	})
+	local function sync()
+		local position, size = scroll.Position, scroll.Size
+		fade.Position = UDim2.new(position.X.Scale, position.X.Offset, position.Y.Scale + size.Y.Scale, position.Y.Offset + size.Y.Offset - 28)
+		fade.Size = UDim2.new(size.X.Scale, size.X.Offset - (scroll.ScrollBarThickness + 4), 0, 28)
+		local canvasHeight = scroll.AbsoluteCanvasSize.Y
+		local windowHeight = scroll.AbsoluteWindowSize.Y
+		local atBottom = scroll.CanvasPosition.Y + windowHeight >= canvasHeight - 4
+		fade.Visible = scroll.Visible and canvasHeight > windowHeight + 4 and not atBottom
+	end
+	for _, prop in ipairs({ "Position", "Size", "Visible", "CanvasPosition", "AbsoluteCanvasSize", "AbsoluteWindowSize" }) do
+		scroll:GetPropertyChangedSignal(prop):Connect(sync)
+	end
+	sync()
+	return fade
 end
 
 -- Tabu juosta su slystanciu auksiniu indikatoriumi
@@ -1107,17 +1180,35 @@ local function getTopInset()
 	return 36
 end
 
+local hudOriginalDisplayOrder = nil
+
 local function setHudAbovePanels(above)
 	if not playerGui then
 		return
 	end
 	local hud = playerGui:FindFirstChild(HUD_GUI_NAME)
 	if hud and hud:IsA("ScreenGui") then
+		if hudOriginalDisplayOrder == nil then
+			hudOriginalDisplayOrder = hud.DisplayOrder
+		end
 		hud.DisplayOrder = above and (PANELS_DISPLAY_ORDER + 1) or (PANELS_DISPLAY_ORDER - 1)
 	end
 end
 
+-- Uzdarius paskutine modaline panele HUD grazinamas i pradine vieta tarp kitu GUI
+local function restoreHudOrder()
+	if not playerGui or hudOriginalDisplayOrder == nil then
+		return
+	end
+	local hud = playerGui:FindFirstChild(HUD_GUI_NAME)
+	if hud and hud:IsA("ScreenGui") then
+		hud.DisplayOrder = hudOriginalDisplayOrder
+	end
+end
+
 -- Apskaiciuoja modalines paneles vieta ir dydi pagal ekrana (ekrano koordinatemis, IgnoreGuiInset = true).
+-- Panele nesidengia su HUD (StatusPanel virsuje kaireje, NavDock apacioje), kol tai imanoma.
+local COMPACT_SCALE = 0.9
 local function computeModalLayout(maxSize)
 	local vp = getViewport()
 	local inset = getTopInset()
@@ -1126,15 +1217,18 @@ local function computeModalLayout(maxSize)
 	local availableTop = inset + m
 	local availableBottom = vp.Y - (m + HUD.dockHeight + HUD.gap)
 	local width = math.min(maxSize.X, vp.X - m * 2)
-	local left = (vp.X - width) / 2
+	local centerX = vp.X / 2
 
-	-- Jei panele horizontaliai persidengia su StatusPanel (virsuje kaireje): pirmiausia bandom ja
-	-- susiaurinti (islaikant pilna auksti), o jei per siaura -- nuleidziam zemiau StatusPanel.
+	-- Persidengimas su StatusPanel: 1) susiaurinti centre, 2) paslinkti i desine, 3) nuleisti zemiau
 	local statusRight = m + HUD.statusWidth + HUD.gap
-	if left < statusRight then
-		local narrowedWidth = vp.X - statusRight * 2
-		if narrowedWidth >= math.min(maxSize.X, 680) then
-			width = narrowedWidth
+	if centerX - width / 2 < statusRight then
+		local centeredWidth = vp.X - statusRight * 2
+		local shiftedWidth = math.min(maxSize.X, vp.X - statusRight - m)
+		if centeredWidth >= math.min(maxSize.X, 680) then
+			width = math.min(maxSize.X, centeredWidth)
+		elseif shiftedWidth >= 640 then
+			width = shiftedWidth
+			centerX = statusRight + width / 2
 		else
 			availableTop = inset + m + HUD.statusHeight + HUD.gap
 		end
@@ -1146,25 +1240,24 @@ local function computeModalLayout(maxSize)
 			compact = false,
 			scale = 1,
 			size = Vector2.new(width, height),
-			center = Vector2.new(vp.X / 2, availableTop + (availableBottom - availableTop) / 2),
+			center = Vector2.new(centerX, availableTop + (availableBottom - availableTop) / 2),
 		}
 	end
 
-	-- Kompaktiskas rezimas (telefonai/mazi langai): panele uzdengia HUD, sumazinta per UIScale
-	local scale = 0.82
+	-- Kompaktiskas rezimas (telefonai/mazi langai): panele uzdengia HUD, siek tiek sumazinta per UIScale
 	local availW = vp.X - 16
 	local availH = vp.Y - inset - 12
-	local logicalW = math.min(maxSize.X, availW / scale)
-	local logicalH = math.min(maxSize.Y, availH / scale)
+	local logicalW = math.min(maxSize.X, availW / COMPACT_SCALE)
+	local logicalH = math.min(maxSize.Y, availH / COMPACT_SCALE)
 	return {
 		compact = true,
-		scale = scale,
+		scale = COMPACT_SCALE,
 		size = Vector2.new(logicalW, logicalH),
 		center = Vector2.new(vp.X / 2, inset + 4 + availH / 2),
 	}
 end
 
--- Telefono vieta: desineje apacioje, virs Phone FAB mygtuko
+-- Telefono vieta: desineje apacioje, virs Phone FAB mygtuko. Mazame ekrane -- centre, kaip modalas.
 local function computePhoneLayout(maxSize)
 	local vp = getViewport()
 	local inset = getTopInset()
@@ -1182,7 +1275,7 @@ local function computePhoneLayout(maxSize)
 			position = Vector2.new(right, bottom),
 		}
 	end
-	local scale = 0.8
+	local scale = COMPACT_SCALE
 	local availH = vp.Y - inset - 12
 	local logicalH = math.min(maxSize.Y, availH / scale)
 	return {
@@ -1215,6 +1308,7 @@ local function ensureGui()
 		BackgroundTransparency = 1,
 		Size = UDim2.new(1, 0, 1, 0),
 		Visible = false,
+		Selectable = false,
 		ZIndex = 1,
 		Parent = panelsGui,
 	})
@@ -1271,7 +1365,7 @@ function PanelKit.createPanel(def)
 	})
 	local holderScale = create("UIScale", { Scale = 1, Parent = holder })
 
-	-- Minksti seseliai (keli sluoksniai), uz CanvasGroup ribu
+	-- Minksti seseliai (keli sluoksniai), uz paneles paviršiaus
 	local shadowLayers = {}
 	for index, spec in ipairs({
 		{ grow = 20, offset = 16, transparency = 0.86 },
@@ -1292,16 +1386,15 @@ function PanelKit.createPanel(def)
 		shadowLayers[index] = { frame = shadow, transparency = spec.transparency }
 	end
 
-	-- CanvasGroup leidzia issaugoti visos paneles fade animacija
-	local canvas = create("CanvasGroup", {
+	-- Paprastas Frame (ne CanvasGroup): CanvasGroup mobiliuose perpiesia visa tekstura po kiekvieno
+	-- pokycio viduje ir gali sulieti teksta. Fade efektas imituojamas virsutiniu overlay (zr. zemiau).
+	local canvas = create("Frame", {
 		Name = "Canvas",
 		BackgroundTransparency = 1,
-		GroupTransparency = 1,
 		Size = UDim2.new(1, 0, 1, 0),
 		ZIndex = 2,
 		Parent = holder,
 	})
-	corner(canvas, radius)
 
 	local surface = create("Frame", {
 		Name = "Surface",
@@ -1309,10 +1402,13 @@ function PanelKit.createPanel(def)
 		Size = UDim2.new(1, -2, 1, -2),
 		Position = UDim2.new(0, 1, 0, 1),
 		ClipsDescendants = false,
+		-- Active: paspaudimai ant tuscios paneles vietos neprakrenta iki Backdrop (kuris uzdaro panele)
+		-- ir telefono atveju -- iki 3D pasaulio (kameros sukimas)
+		Active = true,
 		Parent = canvas,
 	})
 	corner(surface, radius - 1)
-	stroke(surface, style == "phone" and C.gold or C.border, 1, style == "phone" and 0.55 or 0.2)
+	stroke(surface, C.border, style == "phone" and 1.5 or 1, style == "phone" and 0 or 0.2)
 	create("UIGradient", {
 		Color = ColorSequence.new({
 			ColorSequenceKeypoint.new(0, C.bgCard),
@@ -1323,13 +1419,34 @@ function PanelKit.createPanel(def)
 		Parent = surface,
 	})
 
+	-- Telefono korpuso soniniai mygtukai (uz paviršiaus ribu)
+	if style == "phone" then
+		for index, spec in ipairs({
+			{ x = 0, anchorX = 1, y = 0.2, h = 28 },
+			{ x = 0, anchorX = 1, y = 0.27, h = 28 },
+			{ x = 1, anchorX = 0, y = 0.24, h = 44 },
+		}) do
+			local sideButton = create("Frame", {
+				Name = "SideButton" .. index,
+				BackgroundColor3 = C.bgCardLight,
+				AnchorPoint = Vector2.new(spec.anchorX, 0),
+				Size = UDim2.new(0, 3, 0, spec.h),
+				Position = UDim2.new(spec.x, 0, spec.y, 0),
+				ZIndex = 1,
+				Parent = holder,
+			})
+			corner(sideButton, UDim.new(1, 0))
+			table.insert(shadowLayers, { frame = sideButton, transparency = 0 })
+		end
+	end
+
 	panel.Holder = holder
-	panel.Canvas = canvas
 	panel.Surface = surface
 	panel.Accent = accent
 
-	local headerHeight = style == "phone" and 0 or 76
-	local header, titleLabel, subtitleLabel, closeButton, headerRight
+	local HEADER_FULL, HEADER_COMPACT = 76, 56
+	local headerHeight = style == "phone" and 0 or HEADER_FULL
+	local header, titleLabel, subtitleLabel, closeButton, headerRight, iconBadge, iconGlyph, headerDivider
 	if style == "modal" then
 		header = create("Frame", {
 			Name = "Header",
@@ -1337,7 +1454,7 @@ function PanelKit.createPanel(def)
 			Size = UDim2.new(1, 0, 0, headerHeight),
 			Parent = surface,
 		})
-		local iconBadge = create("Frame", {
+		iconBadge = create("Frame", {
 			Name = "IconBadge",
 			BackgroundColor3 = Color3.new(1, 1, 1),
 			Size = UDim2.new(0, 46, 0, 46),
@@ -1347,7 +1464,7 @@ function PanelKit.createPanel(def)
 		corner(iconBadge, 13)
 		stroke(iconBadge, accent.bright, 1, 0.35)
 		gradient(iconBadge, accent.bright, accent.base, 135)
-		label({
+		iconGlyph = label({
 			parent = iconBadge,
 			name = "Icon",
 			text = def.icon or "",
@@ -1394,7 +1511,7 @@ function PanelKit.createPanel(def)
 			Parent = header,
 		})
 		list(headerRight, 8, Enum.FillDirection.Horizontal, Enum.HorizontalAlignment.Right, Enum.VerticalAlignment.Center)
-		PanelKit.divider({
+		headerDivider = PanelKit.divider({
 			parent = surface,
 			position = UDim2.new(0, 20, 0, headerHeight - 1),
 			size = UDim2.new(1, -40, 0, 1),
@@ -1411,6 +1528,28 @@ function PanelKit.createPanel(def)
 		Parent = surface,
 	})
 
+	-- Kompaktiskas (telefono) rezimas: zemesne antraste, be paantrastes
+	local function applyHeaderMode(compact)
+		if style ~= "modal" then
+			return
+		end
+		headerHeight = compact and HEADER_COMPACT or HEADER_FULL
+		header.Size = UDim2.new(1, 0, 0, headerHeight)
+		iconBadge.Size = compact and UDim2.new(0, 36, 0, 36) or UDim2.new(0, 46, 0, 46)
+		iconBadge.Position = compact and UDim2.new(0, 16, 0, 10) or UDim2.new(0, 20, 0, 15)
+		iconGlyph.TextSize = compact and 18 or 22
+		titleLabel.TextSize = compact and 18 or 22
+		titleLabel.Position = compact and UDim2.new(0, 62, 0, 15) or UDim2.new(0, 80, 0, 16)
+		titleLabel.Size = compact and UDim2.new(1, -180, 0, 26) or UDim2.new(1, -200, 0, 26)
+		subtitleLabel.Visible = not compact
+		closeButton.Size = compact and UDim2.new(0, 32, 0, 32) or UDim2.new(0, 38, 0, 38)
+		closeButton.Position = compact and UDim2.new(1, -14, 0, 12) or UDim2.new(1, -18, 0, 19)
+		headerRight.Position = compact and UDim2.new(1, -56, 0, 9) or UDim2.new(1, -68, 0, 19)
+		headerDivider.Position = UDim2.new(0, 20, 0, headerHeight - 1)
+		body.Size = UDim2.new(1, 0, 1, -headerHeight)
+		body.Position = UDim2.new(0, 0, 0, headerHeight)
+	end
+
 	panel.Header = header
 	panel.HeaderRight = headerRight
 	panel.TitleLabel = titleLabel
@@ -1418,85 +1557,138 @@ function PanelKit.createPanel(def)
 	panel.CloseButton = closeButton
 	panel.Body = body
 
-	-- Toast pranesimai (paneles virsuje, virs turinio)
-	local toastFrame, toastText, toastBar, toastIcon, toastStroke
-	do
-		toastFrame = create("Frame", {
-			Name = "Toast",
-			BackgroundColor3 = C.bgCardLight,
-			AnchorPoint = Vector2.new(0.5, 0),
-			Size = UDim2.new(1, style == "phone" and -32 or -120, 0, 0),
-			AutomaticSize = Enum.AutomaticSize.Y,
-			Position = UDim2.new(0.5, 0, 0, headerHeight + 10),
-			Visible = false,
-			ZIndex = 50,
-			Parent = surface,
-		})
-		corner(toastFrame, 10)
-		toastStroke = stroke(toastFrame, C.gold, 1, 0.3)
-		toastBar = create("Frame", {
-			Name = "Accent",
-			BackgroundColor3 = C.gold,
-			Size = UDim2.new(0, 4, 1, -12),
-			Position = UDim2.new(0, 6, 0, 6),
-			ZIndex = 51,
-			Parent = toastFrame,
-		})
-		corner(toastBar, UDim.new(1, 0))
-		toastIcon = label({
-			parent = toastFrame,
-			name = "Icon",
-			text = "✅",
-			textSize = 16,
-			align = Enum.TextXAlignment.Center,
-			size = UDim2.new(0, 24, 0, 24),
-			position = UDim2.new(0, 16, 0, 8),
-			zIndex = 51,
-		})
-		toastText = label({
-			parent = toastFrame,
-			name = "Text",
-			text = "",
-			textSize = 13,
-			wrap = true,
-			alignY = Enum.TextYAlignment.Center,
-			size = UDim2.new(1, -56, 0, 0),
-			position = UDim2.new(0, 46, 0, 0),
-			autoSize = Enum.AutomaticSize.Y,
-			zIndex = 51,
-		})
-		padding(toastText, 11, 0, 11, 0)
-	end
+	-- Toast pranesimai: paneles apacioje (neuzdengia antrastes, tabu ir X), su seseliu
+	local TOAST_TONES = {
+		success = { color = C.gold, glyph = "✓", glyphColor = C.textOnGold },
+		error = { color = C.crimsonBright, glyph = "!", glyphColor = C.textPrimary },
+		info = { color = C.steelBright, glyph = "i", glyphColor = C.textPrimary },
+	}
+	local toastRestOffset = style == "phone" and -80 or -16
+	local toastHolder = create("Frame", {
+		Name = "Toast",
+		BackgroundTransparency = 1,
+		AnchorPoint = Vector2.new(0.5, 1),
+		Size = style == "phone" and UDim2.new(1, -24, 0, 0) or UDim2.new(0, 440, 0, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
+		Position = UDim2.new(0.5, 0, 1, toastRestOffset),
+		Visible = false,
+		ZIndex = 50,
+		Parent = surface,
+	})
+	local toastShadow = create("Frame", {
+		Name = "Shadow",
+		BackgroundColor3 = C.shadow,
+		BackgroundTransparency = 0.6,
+		Size = UDim2.new(1, 0, 1, 0),
+		Position = UDim2.new(0, 0, 0, 4),
+		ZIndex = 50,
+		Parent = toastHolder,
+	})
+	corner(toastShadow, 10)
+	local toastBody = create("Frame", {
+		Name = "Body",
+		BackgroundColor3 = C.bgCardLight,
+		Size = UDim2.new(1, 0, 0, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
+		ZIndex = 51,
+		Parent = toastHolder,
+	})
+	corner(toastBody, 10)
+	local toastStroke = stroke(toastBody, C.gold, 1, 0.3)
+	padding(toastBody, 10, 14, 10, 14)
+	local toastIcon = create("Frame", {
+		Name = "Icon",
+		BackgroundColor3 = C.gold,
+		Size = UDim2.new(0, 20, 0, 20),
+		AnchorPoint = Vector2.new(0, 0.5),
+		Position = UDim2.new(0, 0, 0.5, 0),
+		ZIndex = 52,
+		Parent = toastBody,
+	})
+	corner(toastIcon, UDim.new(1, 0))
+	local toastGlyph = label({
+		parent = toastIcon,
+		name = "Glyph",
+		text = "✓",
+		bold = true,
+		textSize = 13,
+		color = C.textOnGold,
+		align = Enum.TextXAlignment.Center,
+		size = UDim2.new(1, 0, 1, 0),
+		zIndex = 53,
+	})
+	local toastText = label({
+		parent = toastBody,
+		name = "Text",
+		text = "",
+		textSize = 13,
+		wrap = true,
+		size = UDim2.new(1, -30, 0, 0),
+		position = UDim2.new(0, 30, 0, 0),
+		autoSize = Enum.AutomaticSize.Y,
+		zIndex = 52,
+	})
 	local toastToken = 0
+
+	local function setToastVisual(transparency)
+		toastBody.BackgroundTransparency = transparency
+		toastShadow.BackgroundTransparency = 0.6 + 0.4 * transparency
+		toastStroke.Transparency = 0.3 + 0.7 * transparency
+		toastIcon.BackgroundTransparency = transparency
+		toastGlyph.TextTransparency = transparency
+		toastText.TextTransparency = transparency
+	end
+
+	local function tweenToast(duration, transparency, offset)
+		tween(toastHolder, duration, { Position = UDim2.new(0.5, 0, 1, toastRestOffset + offset) }, Enum.EasingStyle.Quint)
+		tween(toastBody, duration, { BackgroundTransparency = transparency })
+		tween(toastShadow, duration, { BackgroundTransparency = 0.6 + 0.4 * transparency })
+		tween(toastStroke, duration, { Transparency = 0.3 + 0.7 * transparency })
+		tween(toastIcon, duration, { BackgroundTransparency = transparency })
+		tween(toastGlyph, duration, { TextTransparency = transparency })
+		tween(toastText, duration, { TextTransparency = transparency })
+	end
 
 	function panel.Toast(text, kind)
 		if not text or text == "" then
 			return
 		end
 		kind = kind or PanelKit.classifyMessage(text)
-		local tone = kind == "error" and C.crimsonBright or (kind == "info" and C.steelBright or C.gold)
-		toastBar.BackgroundColor3 = tone
-		toastStroke.Color = tone
-		toastIcon.Text = kind == "error" and "⚠️" or (kind == "info" and "ℹ️" or "✅")
+		local tone = TOAST_TONES[kind] or TOAST_TONES.success
+		toastStroke.Color = tone.color
+		toastIcon.BackgroundColor3 = tone.color
+		toastGlyph.Text = tone.glyph
+		toastGlyph.TextColor3 = tone.glyphColor
 		toastText.Text = text
 		toastToken += 1
 		local myToken = toastToken
-		local restY = style == "phone" and 58 or headerHeight + 10
-		toastFrame.Position = UDim2.new(0.5, 0, 0, restY - 8)
-		toastFrame.BackgroundTransparency = 0
-		toastFrame.Visible = true
-		tween(toastFrame, 0.25, { Position = UDim2.new(0.5, 0, 0, restY) }, Enum.EasingStyle.Back)
-		task.delay(3.6, function()
+		toastHolder.Position = UDim2.new(0.5, 0, 1, toastRestOffset + 12)
+		setToastVisual(1)
+		toastHolder.Visible = true
+		tweenToast(0.22, 0, 0)
+		task.delay(3.8, function()
 			if toastToken == myToken then
-				tween(toastFrame, 0.2, { Position = UDim2.new(0.5, 0, 0, restY - 8) })
-				task.delay(0.2, function()
+				tweenToast(0.22, 1, 12)
+				task.delay(0.23, function()
 					if toastToken == myToken then
-						toastFrame.Visible = false
+						toastHolder.Visible = false
 					end
 				end)
 			end
 		end)
 	end
+
+	-- Fade overlay: paneles fono spalvos sluoksnis virs viso turinio (atidarant isblunka, uzdarant ryskeja)
+	local fadeOverlay = create("Frame", {
+		Name = "FadeOverlay",
+		BackgroundColor3 = style == "phone" and C.bg or C.bg,
+		BackgroundTransparency = 0,
+		Size = UDim2.new(1, 0, 1, 0),
+		Visible = false,
+		ZIndex = 200,
+		Parent = surface,
+	})
+	corner(fadeOverlay, radius - 1)
 
 	function panel.SetTitle(text)
 		if titleLabel then
@@ -1538,6 +1730,10 @@ function PanelKit.createPanel(def)
 			holder.Position = UDim2.new(0, layout.center.X, 0, layout.center.Y)
 		end
 		holder.Size = UDim2.new(0, math.floor(layout.size.X), 0, math.floor(layout.size.Y))
+		applyHeaderMode(layout.compact)
+		if style == "modal" then
+			toastHolder.Size = UDim2.new(0, math.floor(math.min(440, layout.size.X - 80)), 0, 0)
+		end
 		panel.Layout = layout
 		panel._baseScale = layout.scale
 		if panel.IsOpen then
@@ -1549,13 +1745,13 @@ function PanelKit.createPanel(def)
 		return layout
 	end
 
-	function panel._show()
+	function panel._show(precomputedLayout)
 		panel._token += 1
 		local token = panel._token
-		local layout = panel._applyLayout()
+		local layout = precomputedLayout or panel._applyLayout()
 		panel.IsOpen = true
 		holder.Visible = true
-		if style == "modal" then
+		if style == "modal" or layout.compact then
 			setHudAbovePanels(not layout.compact)
 		end
 
@@ -1563,14 +1759,20 @@ function PanelKit.createPanel(def)
 		local fromOffset = style == "phone" and 28 or 14
 		holder.Position = restPosition + UDim2.new(0, 0, 0, fromOffset)
 		holderScale.Scale = layout.scale * (style == "phone" and 0.9 or 0.95)
-		canvas.GroupTransparency = 1
+		fadeOverlay.BackgroundTransparency = 0
+		fadeOverlay.Visible = true
 		for _, layer in ipairs(shadowLayers) do
 			layer.frame.BackgroundTransparency = 1
 		end
 
 		tween(holder, 0.32, { Position = restPosition }, Enum.EasingStyle.Quint)
 		tween(holderScale, 0.3, { Scale = layout.scale }, Enum.EasingStyle.Back)
-		tween(canvas, 0.2, { GroupTransparency = 0 })
+		tween(fadeOverlay, 0.24, { BackgroundTransparency = 1 })
+		task.delay(0.25, function()
+			if panel._token == token then
+				fadeOverlay.Visible = false
+			end
+		end)
 		for _, layer in ipairs(shadowLayers) do
 			tween(layer.frame, 0.3, { BackgroundTransparency = layer.transparency })
 		end
@@ -1607,7 +1809,8 @@ function PanelKit.createPanel(def)
 		end
 		local base = panel._baseScale or 1
 		local restPosition = holder.Position
-		tween(canvas, 0.16, { GroupTransparency = 1 })
+		fadeOverlay.Visible = true
+		tween(fadeOverlay, 0.16, { BackgroundTransparency = 0 })
 		tween(holderScale, 0.18, { Scale = base * 0.96 })
 		tween(holder, 0.18, { Position = restPosition + UDim2.new(0, 0, 0, style == "phone" and 18 or 8) })
 		for _, layer in ipairs(shadowLayers) do
@@ -1643,18 +1846,36 @@ end
 
 local function getPanel(key)
 	local entry = registry[key]
-	if not entry then
+	if not entry or entry.failed then
 		return nil
 	end
 	if not entry.panel then
 		local ok, result = pcall(entry.factory)
 		if not ok then
+			-- nebandom kurti is naujo kiekvieno paspaudimo metu (liktu pusiau sukurtos UI kopijos)
+			entry.failed = true
 			warn("PanelKit: nepavyko sukurti paneles '" .. key .. "': " .. tostring(result))
 			return nil
 		end
 		entry.panel = result
 	end
 	return entry.panel
+end
+
+-- Gamepad: B mygtukas uzdaro atidaryta modaline panele
+local CLOSE_ACTION = "CoachPanelsClose"
+local function bindCloseAction(bound)
+	if bound then
+		ContextActionService:BindActionAtPriority(CLOSE_ACTION, function(_, inputState)
+			if inputState == Enum.UserInputState.Begin and openModalKey then
+				PanelKit.close(openModalKey)
+				return Enum.ContextActionResult.Sink
+			end
+			return Enum.ContextActionResult.Pass
+		end, false, Enum.ContextActionPriority.High.Value, Enum.KeyCode.ButtonB)
+	else
+		ContextActionService:UnbindAction(CLOSE_ACTION)
+	end
 end
 
 function PanelKit.register(key, factory)
@@ -1670,13 +1891,20 @@ function PanelKit.isOpen(key)
 	return entry ~= nil and entry.panel ~= nil and entry.panel.IsOpen
 end
 
+-- Modalinis elgesys: visada modalinems panelems, o telefonui -- tik kompaktiskame (mazo ekrano) rezime
+local function isModalLike(panel, layout)
+	return panel.Style == "modal" or (layout ~= nil and layout.compact == true)
+end
+
 function PanelKit.open(key)
 	ensureGui()
 	local panel = getPanel(key)
 	if not panel or panel.IsOpen then
 		return
 	end
-	if panel.Style == "modal" then
+	local layout = panel._applyLayout()
+	panel._modalLike = isModalLike(panel, layout)
+	if panel._modalLike then
 		if openModalKey and openModalKey ~= key then
 			local previous = getPanel(openModalKey)
 			if previous then
@@ -1685,8 +1913,9 @@ function PanelKit.open(key)
 		end
 		openModalKey = key
 		showBackdrop(true)
+		bindCloseAction(true)
 	end
-	panel._show()
+	panel._show(layout)
 end
 
 function PanelKit.close(key)
@@ -1696,10 +1925,31 @@ function PanelKit.close(key)
 		return
 	end
 	panel._hide(false)
-	if panel.Style == "modal" and openModalKey == key then
+	if openModalKey == key then
 		openModalKey = nil
 		showBackdrop(false)
+		bindCloseAction(false)
+		restoreHudOrder()
 	end
+end
+
+-- Uzdaro visas atidarytas paneles (pvz. pries atidarant sena UI langa)
+function PanelKit.closeAll()
+	for key, entry in pairs(registry) do
+		if entry.panel and entry.panel.IsOpen then
+			PanelKit.close(key)
+		end
+	end
+end
+
+-- Paneliu sukurimas is anksto (po viena per kadra), kad pirmas atidarymas nestrigtu
+function PanelKit.prebuild(keys)
+	task.spawn(function()
+		for _, key in ipairs(keys) do
+			getPanel(key)
+			task.wait()
+		end
+	end)
 end
 
 function PanelKit.toggle(key)
@@ -1721,7 +1971,7 @@ task.spawn(function()
 		for _, entry in pairs(registry) do
 			if entry.panel and entry.panel.IsOpen then
 				local layout = entry.panel._applyLayout()
-				if entry.panel.Style == "modal" then
+				if entry.panel._modalLike then
 					setHudAbovePanels(not layout.compact)
 				end
 			end

@@ -121,6 +121,7 @@ function TournamentPanel.create(Kit, State)
 		paddingBottom = 8,
 		spacing = 8,
 	})
+	Kit.scrollFade(listColumn)
 	local detail = Kit.scroll({
 		parent = tournamentsPage,
 		name = "Detail",
@@ -132,6 +133,7 @@ function TournamentPanel.create(Kit, State)
 		paddingBottom = 12,
 		spacing = 12,
 	})
+	Kit.scrollFade(detail)
 
 	-- Turnyru sarasas
 	local tournamentRows = {}
@@ -180,7 +182,7 @@ function TournamentPanel.create(Kit, State)
 			parent = row,
 			name = "Sub",
 			text = string.format("%s  •  %s", Kit.stars(tournament.minStars), Kit.formatMoney(tournament.entryFee)),
-			textSize = 11,
+			textSize = 12,
 			color = C.textSecondary,
 			size = UDim2.new(1, -70, 0, 14),
 			position = UDim2.new(0, 56, 0, 38),
@@ -428,7 +430,7 @@ function TournamentPanel.create(Kit, State)
 			Kit.label({
 				parent = chipGrid,
 				name = "Empty",
-				text = "Dar nėra narių -- bandomieji klientai turi tapti nariais.",
+				text = "Dar nėra narių — bandomieji klientai turi tapti nariais.",
 				textSize = 12,
 				color = C.textSecondary,
 				wrap = true,
@@ -484,7 +486,7 @@ function TournamentPanel.create(Kit, State)
 				parent = chip,
 				name = "Status",
 				text = status,
-				textSize = 11,
+				textSize = 12,
 				color = student.injured and C.crimsonBright or C.textSecondary,
 				size = UDim2.new(1, -56, 0, 14),
 				position = UDim2.new(0, 48, 0, 26),
@@ -607,12 +609,12 @@ function TournamentPanel.create(Kit, State)
 			end
 		end
 		if result.champion then
-			resultTitle.Text = "🏆  " .. Kit.displayName(result.tournamentName or "Turnyras") .. " -- ČEMPIONAS!"
+			resultTitle.Text = "🏆  " .. Kit.displayName(result.tournamentName or "Turnyras") .. " — ČEMPIONAS!"
 			resultTitle.TextColor3 = C.goldBright
 			resultStroke.Color = C.gold
 			resultStroke.Transparency = 0.2
 		else
-			resultTitle.Text = string.format("%s -- %d/%d raundų", Kit.displayName(result.tournamentName or "Turnyras"), result.roundsWon or 0, result.totalRounds or 0)
+			resultTitle.Text = string.format("%s — %d/%d raundų", Kit.displayName(result.tournamentName or "Turnyras"), result.roundsWon or 0, result.totalRounds or 0)
 			resultTitle.TextColor3 = C.textPrimary
 			resultStroke.Color = C.border
 			resultStroke.Transparency = 0.45
@@ -737,6 +739,7 @@ function TournamentPanel.create(Kit, State)
 		spacing = 12,
 		visible = false,
 	})
+	Kit.scrollFade(careerPage)
 	pages.career = careerPage
 	local careerRows = {}
 
@@ -849,7 +852,7 @@ function TournamentPanel.create(Kit, State)
 					name = "Text",
 					text = Kit.translate("ladder", ladderTier.name),
 					bold = true,
-					textSize = 10,
+					textSize = 12,
 					color = reached and C.textOnGold or C.textSecondary,
 					size = UDim2.new(0, 0, 1, 0),
 					autoSize = Enum.AutomaticSize.X,
@@ -875,7 +878,7 @@ function TournamentPanel.create(Kit, State)
 				parent = cardFrame,
 				name = "ProgressText",
 				text = progressText,
-				textSize = 11,
+				textSize = 12,
 				color = C.textSecondary,
 				size = UDim2.new(1, -330, 0, 14),
 				position = UDim2.new(0, 78, 0, 84),
@@ -896,7 +899,7 @@ function TournamentPanel.create(Kit, State)
 				name = "OpponentCaption",
 				text = "KITAS VARŽOVAS",
 				bold = true,
-				textSize = 10,
+				textSize = 12,
 				color = C.textSecondary,
 				align = Enum.TextXAlignment.Right,
 				size = UDim2.new(0, 200, 0, 12),
@@ -991,6 +994,9 @@ function TournamentPanel.create(Kit, State)
 	end)
 
 	panel.Every(1, updateEnterButton)
+	panel.Every(30, function()
+		State.refresh()
+	end)
 	panel.OnOpen(function()
 		renderAll()
 		State.refresh()

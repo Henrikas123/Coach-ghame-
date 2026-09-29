@@ -68,7 +68,7 @@ function StaffPanel.create(Kit, State)
 	local panel = Kit.createPanel({
 		key = "Staff",
 		title = "Personalas",
-		subtitle = "Samdyk komandą -- kiekvienas darbuotojas duoda bonusą",
+		subtitle = "Samdyk komandą — kiekvienas darbuotojas duoda bonusą",
 		icon = "👥",
 		accent = "steel",
 		maxSize = Vector2.new(760, 560),
@@ -77,12 +77,14 @@ function StaffPanel.create(Kit, State)
 	local scroll = Kit.scroll({
 		parent = panel.Body,
 		name = "Content",
+		size = UDim2.new(1, -8, 1, -10),
 		paddingTop = 16,
 		paddingBottom = 20,
 		paddingLeft = 20,
-		paddingRight = 16,
+		paddingRight = 8,
 		spacing = 12,
 	})
+	Kit.scrollFade(scroll)
 
 	-- ========================================================
 	-- SUVESTINE
@@ -114,7 +116,7 @@ function StaffPanel.create(Kit, State)
 			name = "Caption",
 			text = def.caption,
 			bold = true,
-			textSize = 11,
+			textSize = 12,
 			color = C.textSecondary,
 			size = UDim2.new(1, 0, 0, 14),
 		})
@@ -131,7 +133,7 @@ function StaffPanel.create(Kit, State)
 			parent = column,
 			name = "Sub",
 			text = "",
-			textSize = 11,
+			textSize = 12,
 			color = C.textSecondary,
 			size = UDim2.new(1, 0, 0, 14),
 			position = UDim2.new(0, 0, 1, -14),
@@ -226,7 +228,7 @@ function StaffPanel.create(Kit, State)
 			parent = cardFrame,
 			name = "Salary",
 			text = string.format("Atlyginimas $%d / %d min", role.salary or 0, math.floor(StaffConfig.PayrollIntervalSeconds / 60)),
-			textSize = 11,
+			textSize = 12,
 			color = C.textSecondary,
 			align = Enum.TextXAlignment.Right,
 			size = UDim2.new(0, 170, 0, 14),

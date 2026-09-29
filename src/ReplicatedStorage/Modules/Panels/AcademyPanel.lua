@@ -29,11 +29,23 @@ local FOCUS_INFO = {
 	Technique = { icon = "🎯", name = "Technika" },
 }
 
+-- Fokuso kilmininkas aprasymams ("+20% naudos is jegos treniruociu")
+local FOCUS_GENITIVE = {
+	Power = "jėgos",
+	Speed = "greičio",
+	Defense = "gynybos",
+	Conditioning = "kondicijos",
+	Technique = "technikos",
+}
+
+-- Sienu spalvu pavadinimai (AcademyConfig.WallColors tvarka)
+local WALL_COLOR_NAMES = { "Pilka", "Raudona", "Mėlyna", "Žalia", "Auksinė", "Juoda" }
+
 -- Bazine (pradine) iranga, kurios nera EquipmentConfig -- rodoma kaip jau irengta
 local STARTER_EQUIPMENT = {
 	id = "PunchingBag",
 	label = "Bokso maišas",
-	description = "Bazinė salės įranga -- jėgos treniruotėms.",
+	description = "Bazinė salės įranga — jėgos treniruotėms.",
 	focus = "Power",
 }
 
@@ -46,7 +58,7 @@ function AcademyPanel.create(Kit, State)
 		subtitle = "Kovotojai, įranga ir salės išvaizda",
 		icon = "🏛️",
 		accent = "gold",
-		maxSize = Vector2.new(800, 580),
+		maxSize = Vector2.new(800, 680),
 	})
 
 	local body = panel.Body
@@ -106,26 +118,17 @@ function AcademyPanel.create(Kit, State)
 		Position = UDim2.new(0, 20, 0, 0),
 		Parent = rosterPage,
 	})
-	local listCaption = Kit.label({
-		parent = listColumn,
-		name = "Caption",
-		text = "KOVOTOJAI",
-		bold = true,
-		textSize = 11,
-		color = C.textSecondary,
-		size = UDim2.new(1, 0, 0, 16),
-	})
 	local rosterList = Kit.scroll({
 		parent = listColumn,
 		name = "RosterList",
-		size = UDim2.new(1, 0, 1, -24),
-		position = UDim2.new(0, 0, 0, 24),
+		size = UDim2.new(1, 0, 1, 0),
 		paddingRight = 8,
 		paddingTop = 2,
 		paddingLeft = 2,
 		paddingBottom = 8,
 		spacing = 8,
 	})
+	Kit.scrollFade(rosterList)
 
 	local detailColumn = Kit.create("Frame", {
 		Name = "DetailColumn",
@@ -158,6 +161,7 @@ function AcademyPanel.create(Kit, State)
 		paddingBottom = 12,
 		spacing = 12,
 	})
+	Kit.scrollFade(detailScroll)
 	local detailEmpty = Kit.emptyState({
 		parent = detailColumn,
 		icon = "🥊",
@@ -181,16 +185,16 @@ function AcademyPanel.create(Kit, State)
 		text = "",
 		bold = true,
 		textSize = 20,
-		size = UDim2.new(1, -200, 0, 24),
+		size = UDim2.new(1, -(90 + 100), 0, 24),
 		position = UDim2.new(0, 90, 0, 16),
 	})
 	local detailSub = Kit.label({
 		parent = headerCard,
 		name = "Sub",
 		text = "",
-		textSize = 13,
+		textSize = 12,
 		color = C.textSecondary,
-		size = UDim2.new(1, -200, 0, 18),
+		size = UDim2.new(1, -(90 + 100), 0, 18),
 		position = UDim2.new(0, 90, 0, 42),
 	})
 	local badgeRow = Kit.create("Frame", {
@@ -206,10 +210,10 @@ function AcademyPanel.create(Kit, State)
 		name = "RecordCaption",
 		text = "REKORDAS",
 		bold = true,
-		textSize = 11,
+		textSize = 10,
 		color = C.textSecondary,
 		align = Enum.TextXAlignment.Right,
-		size = UDim2.new(0, 110, 0, 14),
+		size = UDim2.new(0, 84, 0, 14),
 		position = UDim2.new(1, -16, 0, 16),
 		anchor = Vector2.new(1, 0),
 	})
@@ -218,10 +222,10 @@ function AcademyPanel.create(Kit, State)
 		name = "Record",
 		text = "0-0-0",
 		bold = true,
-		textSize = 20,
+		textSize = 18,
 		color = C.goldBright,
 		align = Enum.TextXAlignment.Right,
-		size = UDim2.new(0, 110, 0, 24),
+		size = UDim2.new(0, 84, 0, 24),
 		position = UDim2.new(1, -16, 0, 30),
 		anchor = Vector2.new(1, 0),
 	})
@@ -232,7 +236,7 @@ function AcademyPanel.create(Kit, State)
 		textSize = 12,
 		color = C.textSecondary,
 		align = Enum.TextXAlignment.Right,
-		size = UDim2.new(0, 130, 0, 16),
+		size = UDim2.new(0, 84, 0, 16),
 		position = UDim2.new(1, -16, 0, 56),
 		anchor = Vector2.new(1, 0),
 	})
@@ -243,7 +247,7 @@ function AcademyPanel.create(Kit, State)
 		name = "StatsCard",
 		size = UDim2.new(1, 0, 0, 0),
 		autoSize = Enum.AutomaticSize.Y,
-		order = 2,
+		order = 4,
 	})
 	Kit.padding(statsCard, 14, 16, 16, 16)
 	Kit.list(statsCard, 10)
@@ -263,12 +267,12 @@ function AcademyPanel.create(Kit, State)
 			text = Kit.translate("stats", statId),
 			textSize = 13,
 			color = C.textSecondary,
-			size = UDim2.new(0, 84, 1, 0),
+			size = UDim2.new(0, 104, 1, 0),
 		})
 		local bar = Kit.progressBar({
 			parent = row,
-			size = UDim2.new(1, -160, 0, 8),
-			position = UDim2.new(0, 88, 0.5, 0),
+			size = UDim2.new(1, -(112 + 72), 0, 8),
+			position = UDim2.new(0, 112, 0.5, 0),
 			anchor = Vector2.new(0, 0.5),
 		})
 		local value = Kit.label({
@@ -278,11 +282,23 @@ function AcademyPanel.create(Kit, State)
 			bold = true,
 			textSize = 13,
 			align = Enum.TextXAlignment.Right,
-			size = UDim2.new(0, 60, 1, 0),
+			size = UDim2.new(0, 64, 1, 0),
 			position = UDim2.new(1, 0, 0, 0),
 			anchor = Vector2.new(1, 0),
 		})
-		statRows[statId] = { bar = bar, value = value }
+		local maxBadge = Kit.badge({
+			parent = row,
+			name = "MaxBadge",
+			text = "MAX",
+			color = C.gold,
+			solid = true,
+			height = 16,
+			textSize = 10,
+			anchor = Vector2.new(1, 0.5),
+			position = UDim2.new(1, -28, 0.5, 0),
+		})
+		maxBadge.Visible = false
+		statRows[statId] = { bar = bar, value = value, maxBadge = maxBadge }
 	end
 
 	-- --- Detalės: būklė (nuovargis, nuotaika, padrąsinimas) ---
@@ -291,7 +307,7 @@ function AcademyPanel.create(Kit, State)
 		name = "ConditionCard",
 		size = UDim2.new(1, 0, 0, 0),
 		autoSize = Enum.AutomaticSize.Y,
-		order = 3,
+		order = 5,
 	})
 	Kit.padding(conditionCard, 14, 16, 16, 16)
 	Kit.list(conditionCard, 10)
@@ -311,12 +327,12 @@ function AcademyPanel.create(Kit, State)
 			text = name,
 			textSize = 13,
 			color = C.textSecondary,
-			size = UDim2.new(0, 84, 1, 0),
+			size = UDim2.new(0, 104, 1, 0),
 		})
 		local bar = Kit.progressBar({
 			parent = row,
-			size = UDim2.new(1, -160, 0, 8),
-			position = UDim2.new(0, 88, 0.5, 0),
+			size = UDim2.new(1, -(112 + 72), 0, 8),
+			position = UDim2.new(0, 112, 0.5, 0),
 			anchor = Vector2.new(0, 0.5),
 		})
 		local value = Kit.label({
@@ -326,7 +342,7 @@ function AcademyPanel.create(Kit, State)
 			bold = true,
 			textSize = 13,
 			align = Enum.TextXAlignment.Right,
-			size = UDim2.new(0, 60, 1, 0),
+			size = UDim2.new(0, 64, 1, 0),
 			position = UDim2.new(1, 0, 0, 0),
 			anchor = Vector2.new(1, 0),
 		})
@@ -334,16 +350,38 @@ function AcademyPanel.create(Kit, State)
 	end
 	local fatigueRow = conditionRow("Nuovargis", 1)
 	local moraleRow = conditionRow("Nuotaika", 2)
+	local conditionCallout = Kit.create("Frame", {
+		Name = "Callout",
+		BackgroundColor3 = C.crimson,
+		BackgroundTransparency = 0.88,
+		Size = UDim2.new(1, 0, 0, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
+		LayoutOrder = 3,
+		Visible = false,
+		Parent = conditionCard,
+	})
+	Kit.corner(conditionCallout, 10)
+	Kit.stroke(conditionCallout, C.crimson, 1, 0.5)
+	Kit.padding(conditionCallout, 10, 12, 10, 12)
+	Kit.label({
+		parent = conditionCallout,
+		name = "Icon",
+		text = "⚠",
+		bold = true,
+		textSize = 14,
+		color = C.crimsonBright,
+		size = UDim2.new(0, 18, 0, 18),
+	})
 	local conditionHint = Kit.label({
-		parent = conditionCard,
+		parent = conditionCallout,
 		name = "Hint",
 		text = "",
 		textSize = 12,
-		color = C.textSecondary,
+		color = C.textPrimary,
 		wrap = true,
-		size = UDim2.new(1, 0, 0, 0),
+		size = UDim2.new(1, -26, 0, 0),
+		position = UDim2.new(0, 26, 0, 1),
 		autoSize = Enum.AutomaticSize.Y,
-		order = 3,
 	})
 	local encourageButton = Kit.button({
 		parent = conditionCard,
@@ -361,11 +399,12 @@ function AcademyPanel.create(Kit, State)
 		name = "InjuryCard",
 		size = UDim2.new(1, 0, 0, 0),
 		autoSize = Enum.AutomaticSize.Y,
-		order = 4,
+		order = 2,
 		strokeColor = C.crimsonBright,
 		strokeTransparency = 0.3,
-		gradientTop = C.bgCardLight,
-		gradientBottom = C.bgCard,
+		-- lengvas crimson atspalvis (crimson ~10% virs kortelės fono)
+		gradientTop = C.bgCardLight:Lerp(C.crimson, 0.12),
+		gradientBottom = C.bgCard:Lerp(C.crimson, 0.07),
 	})
 	Kit.padding(injuryCard, 14, 16, 16, 16)
 	Kit.list(injuryCard, 8)
@@ -394,7 +433,7 @@ function AcademyPanel.create(Kit, State)
 		name = "RecoveryButton",
 		text = string.format("Poilsio kambarys  •  $%d", InjuryConfig.RecoveryRoomCost),
 		icon = "🛏️",
-		variant = "crimson",
+		variant = "gold",
 		size = UDim2.new(1, 0, 0, 38),
 		order = 3,
 	})
@@ -405,7 +444,7 @@ function AcademyPanel.create(Kit, State)
 		name = "TrialCard",
 		size = UDim2.new(1, 0, 0, 0),
 		autoSize = Enum.AutomaticSize.Y,
-		order = 5,
+		order = 3,
 		strokeColor = C.steelBright,
 		strokeTransparency = 0.4,
 	})
@@ -413,7 +452,7 @@ function AcademyPanel.create(Kit, State)
 	Kit.list(trialCard, 10)
 	local _, trialHint = Kit.sectionHeader({ parent = trialCard, title = "Bandomasis laikotarpis", hint = "", accent = C.steelBright, order = 0 })
 	local trialSessionsRow = conditionRow("Treniruotės", 1, trialCard)
-	local trialSatisfactionRow = conditionRow("Pasitenk.", 2, trialCard)
+	local trialSatisfactionRow = conditionRow("Pasitenkinimas", 2, trialCard)
 	Kit.label({
 		parent = trialCard,
 		name = "Explain",
@@ -455,18 +494,14 @@ function AcademyPanel.create(Kit, State)
 		Parent = styleCard,
 	})
 	local styleGridLayout = Kit.grid(styleGrid, UDim2.new(1 / 3, -6, 0, 34), UDim2.new(0, 8, 0, 8))
-	local styleMatchup = Kit.label({
-		parent = styleCard,
-		name = "Matchup",
-		text = "",
-		textSize = 12,
-		color = C.textSecondary,
-		wrap = true,
-		rich = true,
-		size = UDim2.new(1, 0, 0, 0),
-		autoSize = Enum.AutomaticSize.Y,
-		order = 2,
+	local styleMatchup = Kit.create("Frame", {
+		Name = "Matchup",
+		BackgroundTransparency = 1,
+		Size = UDim2.new(1, 0, 0, 22),
+		LayoutOrder = 2,
+		Parent = styleCard,
 	})
+	Kit.list(styleMatchup, 8, Enum.FillDirection.Horizontal, Enum.HorizontalAlignment.Left, Enum.VerticalAlignment.Center)
 	local styleChangeButton = Kit.button({
 		parent = styleCard,
 		name = "ChangeStyleButton",
@@ -543,18 +578,21 @@ function AcademyPanel.create(Kit, State)
 				chip.button.BackgroundColor3 = C.gold
 				chip.stroke.Color = C.goldBright
 				chip.stroke.Transparency = 0.2
+				chip.stroke.Thickness = 1
 				chip.label.TextColor3 = C.textOnGold
 				chip.label.Text = "✓ " .. styleId
 			elseif isPending then
-				chip.button.BackgroundColor3 = C.bgCardLight
+				chip.button.BackgroundColor3 = C.steel
 				chip.stroke.Color = C.steelBright
 				chip.stroke.Transparency = 0
+				chip.stroke.Thickness = 2
 				chip.label.TextColor3 = C.textPrimary
 				chip.label.Text = styleId
 			else
 				chip.button.BackgroundColor3 = C.bgCardLight
-				chip.stroke.Color = chip.hover and C.gold or C.border
-				chip.stroke.Transparency = chip.hover and 0.3 or 0.3
+				chip.stroke.Color = C.border
+				chip.stroke.Transparency = chip.hover and 0 or 0.3
+				chip.stroke.Thickness = 1
 				chip.label.TextColor3 = chip.hover and C.textPrimary or C.textSecondary
 				chip.label.Text = styleId
 			end
@@ -568,13 +606,16 @@ function AcademyPanel.create(Kit, State)
 				weakAgainst = attacker
 			end
 		end
+		for _, child in ipairs(styleMatchup:GetChildren()) do
+			if child:IsA("GuiObject") then
+				child:Destroy()
+			end
+		end
 		if strongAgainst or weakAgainst then
-			styleMatchup.Text = string.format(
-				"<b>%s</b>  •  Stiprus prieš: <font color=\"#ECC85C\">%s</font>  •  Silpnas prieš: <font color=\"#D63E4C\">%s</font>",
-				shownStyle, strongAgainst or "—", weakAgainst or "—"
-			)
+			Kit.badge({ parent = styleMatchup, text = "Stiprus prieš: " .. (strongAgainst or "—"), color = C.gold, order = 1 })
+			Kit.badge({ parent = styleMatchup, text = "Silpnas prieš: " .. (weakAgainst or "—"), color = C.crimsonBright, order = 2 })
 		else
-			styleMatchup.Text = string.format("<b>%s</b>  •  Subalansuotas stilius be stiprybių ir silpnybių.", shownStyle or "-")
+			Kit.badge({ parent = styleMatchup, text = "Subalansuotas: be stiprybių ir silpnybių", color = C.steelBright, order = 1 })
 		end
 
 		local money = State.get().money or 0
@@ -668,16 +709,17 @@ function AcademyPanel.create(Kit, State)
 				child:Destroy()
 			end
 		end
-		Kit.badge({ parent = badgeRow, text = "💎 " .. Kit.translate("potential", student.potencialas), color = potentialColor, order = 1 })
+		Kit.badge({ parent = badgeRow, text = "◆ " .. Kit.translate("potential", student.potencialas), color = potentialColor, order = 1 })
 		if student.karjerosStadija == "Trial" then
 			Kit.badge({ parent = badgeRow, text = "Bandomasis", color = C.steelBright, order = 2 })
 		else
-			Kit.badge({ parent = badgeRow, text = "Narys", color = C.gold, order = 2 })
+			Kit.badge({ parent = badgeRow, text = "Narys", color = C.textSecondary, order = 2 })
 		end
+		-- Crimson = tik neigiama busena; paruostas kovoms = auksas
 		if student.injured then
-			Kit.badge({ parent = badgeRow, text = "Traumuotas", color = C.crimsonBright, order = 3 })
+			Kit.badge({ parent = badgeRow, text = "Traumuotas", color = C.crimson, solid = true, textColor = C.textPrimary, order = 3 })
 		elseif student.competitionReady then
-			Kit.badge({ parent = badgeRow, text = "Paruoštas kovoms", color = C.crimsonBright, order = 3 })
+			Kit.badge({ parent = badgeRow, text = "✓ Paruoštas", color = C.gold, order = 3 })
 		end
 
 		local record = student.record or {}
@@ -694,13 +736,13 @@ function AcademyPanel.create(Kit, State)
 			local value = stats[statId] or 0
 			local atCap = caps[statId] ~= nil and value >= caps[statId]
 			row.bar.Set(value / TrainingConfig.MaxStat)
+			row.value.Text = tostring(value)
+			row.maxBadge.Visible = atCap
 			if atCap then
 				row.bar.SetColor(C.goldBright, C.goldBright)
-				row.value.Text = value .. "  MAX"
 				row.value.TextColor3 = C.goldBright
 			else
 				row.bar.SetColor(C.gold, C.goldBright)
-				row.value.Text = tostring(value)
 				row.value.TextColor3 = C.textPrimary
 			end
 		end
@@ -717,15 +759,15 @@ function AcademyPanel.create(Kit, State)
 
 		local hints = {}
 		if fatigue >= TrainingConfig.FatigueTrainingBlockThreshold then
-			table.insert(hints, "Per daug pavargęs -- reikia poilsio prieš treniruotę ar kovą.")
+			table.insert(hints, "Per daug pavargęs — reikia poilsio prieš treniruotę ar kovą.")
 		elseif fatigue >= DataSchema.Morale.OvertrainingFatigueThreshold then
 			table.insert(hints, "Pervargimo zona: treniruotės dabar kenkia nuotaikai.")
 		end
 		if morale < DataSchema.Morale.LowMoraleThreshold then
 			table.insert(hints, "Žema nuotaika mažina treniruočių ir kovų efektyvumą.")
 		end
-		conditionHint.Text = table.concat(hints, "  ")
-		conditionHint.Visible = #hints > 0
+		conditionHint.Text = table.concat(hints, " ")
+		conditionCallout.Visible = #hints > 0
 
 		-- Trauma
 		injuryCard.Visible = student.injured == true
@@ -769,7 +811,7 @@ function AcademyPanel.create(Kit, State)
 
 	local function renderRoster()
 		local students = State.get().students or {}
-		listCaption.Text = string.format("KOVOTOJAI  •  %d", #students)
+		tabs.SetLabel("roster", string.format("Kovotojai · %d", #students))
 
 		-- Jei pasirinktas kovotojas dingo (pvz. bandomasis isejo) -- renkames pirma
 		local selectedStillExists = false
@@ -793,7 +835,7 @@ function AcademyPanel.create(Kit, State)
 				parent = rosterList,
 				icon = "📱",
 				title = "Dar nėra kovotojų",
-				text = "Skelbk turinį telefone -- nauji klientai ateis patys.",
+				text = "Skelbk turinį telefone — nauji klientai ateis patys.",
 				size = UDim2.new(1, 0, 0, 170),
 			})
 			table.insert(rosterRows, empty)
@@ -838,7 +880,7 @@ function AcademyPanel.create(Kit, State)
 				text = student.name or "?",
 				bold = true,
 				textSize = 14,
-				size = UDim2.new(1, -100, 0, 18),
+				size = UDim2.new(1, -140, 0, 18),
 				position = UDim2.new(0, 62, 0, 13),
 			})
 			local stage = student.karjerosStadija == "Trial" and "Bandomasis" or "Narys"
@@ -848,27 +890,32 @@ function AcademyPanel.create(Kit, State)
 				text = string.format("%s  •  OVR %d", stage, Kit.overall(student)),
 				textSize = 12,
 				color = student.karjerosStadija == "Trial" and C.steelBright or C.textSecondary,
-				size = UDim2.new(1, -100, 0, 16),
+				size = UDim2.new(1, -140, 0, 16),
 				position = UDim2.new(0, 62, 0, 34),
 			})
-			local indicator = ""
+			-- Busenos zyme (vietoj emoji): trauma > pavarges > paruostas kovoms
+			local statusBadge = nil
 			if student.injured then
-				indicator = "🩹"
+				statusBadge = { text = "Trauma", color = C.crimson, solid = true, textColor = C.textPrimary }
 			elseif (student.fatigue or 0) >= TrainingConfig.FatigueTrainingBlockThreshold then
-				indicator = "😮‍💨"
+				statusBadge = { text = "Pavargęs", color = C.crimsonBright }
 			elseif student.competitionReady then
-				indicator = "⚔️"
+				statusBadge = { text = "Kovoms", color = C.gold }
 			end
-			Kit.label({
-				parent = row,
-				name = "Indicator",
-				text = indicator,
-				textSize = 16,
-				align = Enum.TextXAlignment.Right,
-				size = UDim2.new(0, 28, 0, 28),
-				position = UDim2.new(1, -12, 0.5, 0),
-				anchor = Vector2.new(1, 0.5),
-			})
+			if statusBadge then
+				Kit.badge({
+					parent = row,
+					name = "Status",
+					text = statusBadge.text,
+					color = statusBadge.color,
+					solid = statusBadge.solid,
+					textColor = statusBadge.textColor,
+					height = 18,
+					textSize = 11,
+					anchor = Vector2.new(1, 0.5),
+					position = UDim2.new(1, -12, 0.5, 0),
+				})
+			end
 
 			row.MouseEnter:Connect(function()
 				if key ~= selectedKey then
@@ -893,6 +940,46 @@ function AcademyPanel.create(Kit, State)
 			end)
 
 			table.insert(rosterRows, row)
+		end
+
+		-- Maziau nei 4 kovotojai: kvietimas pritraukti daugiau per telefona
+		if #students > 0 and #students < 4 then
+			local cta = Kit.card({
+				parent = rosterList,
+				name = "MoreFightersCta",
+				size = UDim2.new(1, 0, 0, 120),
+				order = 1000,
+				strokeColor = C.steelBright,
+				strokeTransparency = 0.55,
+			})
+			Kit.padding(cta, 14, 14, 14, 14)
+			Kit.label({ parent = cta, name = "Title", text = "📱  Reikia daugiau kovotojų", bold = true, textSize = 14, size = UDim2.new(1, 0, 0, 18) })
+			Kit.label({
+				parent = cta,
+				name = "Text",
+				text = "Skelbk įrašus SocialGym — nauji klientai ateis patys.",
+				textSize = 12,
+				color = C.textSecondary,
+				wrap = true,
+				alignY = Enum.TextYAlignment.Top,
+				size = UDim2.new(1, 0, 0, 32),
+				position = UDim2.new(0, 0, 0, 22),
+			})
+			Kit.button({
+				parent = cta,
+				name = "OpenPhone",
+				text = "Atidaryti telefoną",
+				variant = "steel",
+				size = UDim2.new(1, 0, 0, 32),
+				position = UDim2.new(0, 0, 1, 0),
+				anchor = Vector2.new(0, 1),
+				textSize = 13,
+				onClick = function()
+					Kit.close("Academy")
+					Kit.open("Phone")
+				end,
+			})
+			table.insert(rosterRows, cta)
 		end
 
 		renderDetail()
@@ -957,12 +1044,14 @@ function AcademyPanel.create(Kit, State)
 	local equipmentScroll = Kit.scroll({
 		parent = equipmentPage,
 		name = "EquipmentScroll",
+		size = UDim2.new(1, -8, 1, -10),
 		paddingLeft = 20,
-		paddingRight = 16,
+		paddingRight = 8,
 		paddingTop = 2,
 		paddingBottom = 16,
-		spacing = 14,
+		spacing = 12,
 	})
+	Kit.scrollFade(equipmentScroll)
 
 	local equipmentSummary = Kit.card({
 		parent = equipmentScroll,
@@ -1035,7 +1124,7 @@ function AcademyPanel.create(Kit, State)
 		LayoutOrder = 2,
 		Parent = equipmentScroll,
 	})
-	local equipmentGridLayout = Kit.grid(equipmentGrid, UDim2.new(0.5, -8, 0, 156), UDim2.new(0, 14, 0, 14))
+	local equipmentGridLayout = Kit.grid(equipmentGrid, UDim2.new(0.5, -7, 0, 156), UDim2.new(0, 12, 0, 12))
 
 	local equipmentCards = {}
 	local function buildEquipmentCard(order, itemId, item, isStarter)
@@ -1075,10 +1164,14 @@ function AcademyPanel.create(Kit, State)
 			color = isStarter and C.textSecondary or C.steelBright,
 			position = UDim2.new(0, 72, 0, 38),
 		})
+		local description = item.description
+		if not isStarter and item.multiplier and FOCUS_GENITIVE[item.focus] then
+			description = string.format("+%d%% naudos iš %s treniruočių.", math.floor((item.multiplier - 1) * 100 + 0.5), FOCUS_GENITIVE[item.focus])
+		end
 		Kit.label({
 			parent = cardFrame,
 			name = "Description",
-			text = item.description,
+			text = description,
 			textSize = 12,
 			color = C.textSecondary,
 			wrap = true,
@@ -1089,17 +1182,28 @@ function AcademyPanel.create(Kit, State)
 		local buyButton = Kit.button({
 			parent = cardFrame,
 			name = "BuyButton",
-			text = isStarter and "Įrengta" or ("Pirkti  •  " .. Kit.formatMoney(item.cost)),
+			text = "Pirkti  •  " .. Kit.formatMoney(item.cost or 0),
 			variant = "gold",
 			size = UDim2.new(1, -28, 0, 36),
 			position = UDim2.new(0, 14, 1, -50),
 			textSize = 13,
-			enabled = not isStarter,
 			onClick = function()
 				State.fire("EquipmentPurchaseRequest", itemId)
 			end,
 		})
-		equipmentCards[itemId] = { stroke = cardStroke, button = buyButton, item = item, isStarter = isStarter }
+		-- Irengta iranga: ramus uzrasas vietoj isjungto mygtuko
+		local ownedLabel = Kit.label({
+			parent = cardFrame,
+			name = "OwnedLabel",
+			text = "✓  Įrengta",
+			bold = true,
+			textSize = 13,
+			color = C.gold,
+			size = UDim2.new(1, -28, 0, 36),
+			position = UDim2.new(0, 14, 1, -50),
+		})
+		ownedLabel.Visible = false
+		equipmentCards[itemId] = { stroke = cardStroke, button = buyButton, owned = ownedLabel, item = item, isStarter = isStarter }
 	end
 
 	buildEquipmentCard(0, STARTER_EQUIPMENT.id, STARTER_EQUIPMENT, true)
@@ -1121,23 +1225,25 @@ function AcademyPanel.create(Kit, State)
 		for itemId, entry in pairs(equipmentCards) do
 			totalCount += 1
 			local isOwned = owned[itemId] == true
+			entry.button.Instance.Visible = not isOwned
+			entry.owned.Visible = isOwned
 			if isOwned then
 				ownedCount += 1
-				entry.button.SetEnabled(false)
-				entry.button.SetText("✓  Įrengta")
-				entry.stroke.Color = C.gold
-				entry.stroke.Transparency = 0.35
+				entry.stroke.Color = C.border
+				entry.stroke.Transparency = 0.45
 			else
 				local money = s.money or 0
 				local cost = entry.item.cost or 0
-				entry.stroke.Color = C.border
-				entry.stroke.Transparency = 0.45
 				if money >= cost then
+					entry.stroke.Color = C.gold
+					entry.stroke.Transparency = 0.45
 					entry.button.SetEnabled(true)
 					entry.button.SetText("Pirkti  •  " .. Kit.formatMoney(cost))
 				else
+					entry.stroke.Color = C.border
+					entry.stroke.Transparency = 0.45
 					entry.button.SetEnabled(false)
-					entry.button.SetText(string.format("%s  •  trūksta %s", Kit.formatMoney(cost), Kit.formatMoney(cost - money)))
+					entry.button.SetText("Trūksta " .. Kit.formatMoney(cost - money))
 				end
 			end
 		end
@@ -1284,13 +1390,26 @@ function AcademyPanel.create(Kit, State)
 		paddingBottom = 8,
 		spacing = 10,
 	})
+	Kit.scrollFade(formScroll)
 
 	local _, nameCounter = Kit.sectionHeader({ parent = formScroll, title = "Pavadinimas", hint = "0/24", order = 1 })
-	local nameBox = Kit.textBox({
+	local nameBox, nameHolder = Kit.textBox({
 		parent = formScroll,
 		placeholder = AcademyConfig.DefaultName,
 		order = 2,
 		size = UDim2.new(1, 0, 0, 42),
+	})
+	nameBox.Size = UDim2.new(1, -44, 1, 0)
+	Kit.label({
+		parent = nameHolder,
+		name = "EditGlyph",
+		text = "✎",
+		textSize = 14,
+		color = C.textSecondary,
+		align = Enum.TextXAlignment.Center,
+		size = UDim2.new(0, 24, 1, 0),
+		position = UDim2.new(1, -8, 0, 0),
+		anchor = Vector2.new(1, 0),
 	})
 
 	local function swatchRow(order, height)
@@ -1330,6 +1449,30 @@ function AcademyPanel.create(Kit, State)
 			align = Enum.TextXAlignment.Center,
 			size = UDim2.new(1, 0, 1, 0),
 		})
+		-- Pasirinkimo zyme: auksinis apskritimas su varnele apatiniame desiniajame kampe
+		local check = Kit.create("Frame", {
+			Name = "Check",
+			BackgroundColor3 = C.gold,
+			AnchorPoint = Vector2.new(1, 1),
+			Size = UDim2.new(0, 18, 0, 18),
+			Position = UDim2.new(1, 4, 1, 4),
+			Visible = false,
+			ZIndex = 3,
+			Parent = choice,
+		})
+		Kit.corner(check, UDim.new(1, 0))
+		Kit.stroke(check, C.bg, 2, 0)
+		Kit.label({
+			parent = check,
+			name = "Glyph",
+			text = "✓",
+			bold = true,
+			textSize = 11,
+			color = C.textOnGold,
+			align = Enum.TextXAlignment.Center,
+			size = UDim2.new(1, 0, 1, 0),
+			zIndex = 4,
+		})
 		choice.MouseEnter:Connect(function()
 			Kit.tween(scale, 0.12, { Scale = 1.08 }, Enum.EasingStyle.Back)
 		end)
@@ -1337,7 +1480,7 @@ function AcademyPanel.create(Kit, State)
 			Kit.tween(scale, 0.12, { Scale = 1 })
 		end)
 		choice.Activated:Connect(onPick)
-		return { button = choice, ring = ring, glyph = glyph, isText = text ~= nil }
+		return { button = choice, ring = ring, glyph = glyph, check = check, isText = text ~= nil }
 	end
 
 	local function paintChoices(choices, selectedIndex)
@@ -1346,9 +1489,8 @@ function AcademyPanel.create(Kit, State)
 			choice.ring.Color = selected and C.goldBright or C.border
 			choice.ring.Transparency = selected and 0 or 0.2
 			choice.ring.Thickness = selected and 3 or 2
-			if not choice.isText then
-				choice.glyph.Text = selected and "✓" or ""
-			else
+			choice.check.Visible = selected
+			if choice.isText then
 				choice.button.BackgroundColor3 = selected and C.bgCard or C.bgCardLight
 			end
 		end
@@ -1356,7 +1498,7 @@ function AcademyPanel.create(Kit, State)
 
 	local renderStyleDraft -- forward
 
-	Kit.sectionHeader({ parent = formScroll, title = "Sienų spalva", order = 3 })
+	local _, wallNameHint = Kit.sectionHeader({ parent = formScroll, title = "Sienų spalva", hint = "", order = 3 })
 	local wallRow = swatchRow(4, 44)
 	local wallChoices = {}
 	for index, color in ipairs(AcademyConfig.WallColors) do
@@ -1394,7 +1536,7 @@ function AcademyPanel.create(Kit, State)
 		Name = "Actions",
 		BackgroundTransparency = 1,
 		Size = UDim2.new(1, 0, 0, 40),
-		LayoutOrder = 9,
+		LayoutOrder = 10,
 		Parent = formScroll,
 	})
 	local resetButton = Kit.button({
@@ -1423,7 +1565,7 @@ function AcademyPanel.create(Kit, State)
 		text = "",
 		textSize = 12,
 		color = C.textSecondary,
-		order = 10,
+		order = 9,
 	})
 
 	local function isDirty()
@@ -1449,6 +1591,7 @@ function AcademyPanel.create(Kit, State)
 			end
 		end
 		nameCounter.Text = string.format("%d/%d", utf8.len(draft.academyName) or #draft.academyName, AcademyConfig.MaxNameLength)
+		wallNameHint.Text = WALL_COLOR_NAMES[draft.wallColorIndex] or ""
 		paintChoices(wallChoices, draft.wallColorIndex)
 		paintChoices(floorChoices, draft.floorColorIndex)
 		paintChoices(logoChoices, draft.logoIndex)
@@ -1461,7 +1604,7 @@ function AcademyPanel.create(Kit, State)
 			dirtyHint.Text = "Saugoma..."
 			dirtyHint.TextColor3 = C.textSecondary
 		elseif dirty then
-			dirtyHint.Text = "● Yra neišsaugotų pakeitimų"
+			dirtyHint.Text = "● Neišsaugoti pakeitimai"
 			dirtyHint.TextColor3 = C.goldBright
 		else
 			dirtyHint.Text = "Visi pakeitimai išsaugoti"
@@ -1551,13 +1694,26 @@ function AcademyPanel.create(Kit, State)
 		renderDetail()
 	end))
 	State.subscribe("equipment", queue(renderEquipment))
+	local lastAcademyMessage = nil
+	State.onMessage("academy", function(message)
+		lastAcademyMessage = message
+	end)
 	State.subscribe("academy", function()
 		if awaitingSave then
 			awaitingSave = false
 			loadSavedIntoDraft()
-			if panel.IsOpen then
-				panel.Toast("Akademijos išvaizda išsaugota!", "success")
-			end
+			task.defer(function()
+				-- serverio zinute (pvz. atmestas pavadinimas) turi pirmenybe pries "issaugota"
+				local message = lastAcademyMessage
+				lastAcademyMessage = nil
+				if panel.IsOpen then
+					if message then
+						panel.Toast(message, "error")
+					else
+						panel.Toast("Akademijos išvaizda išsaugota!", "success")
+					end
+				end
+			end)
 		elseif not isDirty() then
 			loadSavedIntoDraft()
 		end
@@ -1572,6 +1728,10 @@ function AcademyPanel.create(Kit, State)
 	State.onMessage("equipment", toastIfOpen)
 
 	panel.Every(1, updateTimers)
+	-- Serveris kas 60 s pasyviai keicia nuovargi/nuotaika/traumas be pranesimo -- periodiskai atnaujinam
+	panel.Every(30, function()
+		State.refresh()
+	end)
 
 	panel.OnOpen(function()
 		loadSavedIntoDraft()
@@ -1581,13 +1741,13 @@ function AcademyPanel.create(Kit, State)
 
 	panel.OnLayout(function(layout)
 		local wasNarrow = narrow
-		narrow = layout.size.X < 640
+		narrow = layout.compact or layout.size.X < 640
 		if narrow ~= wasNarrow then
 			showingDetailOnNarrow = false
 		end
 		applyNarrow()
 		-- Iranga: 1 stulpelis siaurame lange
-		equipmentGridLayout.CellSize = narrow and UDim2.new(1, 0, 0, 156) or UDim2.new(0.5, -8, 0, 156)
+		equipmentGridLayout.CellSize = (layout.size.X < 640) and UDim2.new(1, 0, 0, 156) or UDim2.new(0.5, -7, 0, 156)
 		-- Isvaizda: perziura virsuje siaurame lange
 		if narrow then
 			previewColumn.Visible = false

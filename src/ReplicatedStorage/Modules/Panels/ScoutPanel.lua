@@ -58,15 +58,16 @@ function ScoutPanel.create(Kit, State)
 		local page = Kit.scroll({
 			parent = panel.Body,
 			name = "Page_" .. key,
-			size = UDim2.new(1, 0, 1, -70),
+			size = UDim2.new(1, -8, 1, -80),
 			position = UDim2.new(0, 0, 0, 70),
 			paddingTop = 2,
 			paddingBottom = 20,
 			paddingLeft = 20,
-			paddingRight = 16,
+			paddingRight = 8,
 			spacing = 12,
 			visible = key == "talent",
 		})
+		Kit.scrollFade(page)
 		pages[key] = page
 		return page
 	end
@@ -142,7 +143,7 @@ function ScoutPanel.create(Kit, State)
 		name = "CooldownCaption",
 		text = "",
 		bold = true,
-		textSize = 11,
+		textSize = 12,
 		color = C.textSecondary,
 		align = Enum.TextXAlignment.Right,
 		size = UDim2.new(0, 196, 0, 14),
@@ -179,7 +180,7 @@ function ScoutPanel.create(Kit, State)
 				parent = talentPage,
 				icon = "🧭",
 				title = "Kandidatų dar nėra",
-				text = "Siųsk skautą -- jis atves 3 talentus su jau žinomu potencialu (skirtingai nei atsitiktiniai klientai).",
+				text = "Siųsk skautą — jis atves 3 talentus su jau žinomu potencialu (skirtingai nei atsitiktiniai klientai).",
 				size = UDim2.new(1, 0, 0, 160),
 				order = 3,
 			}))
@@ -278,7 +279,7 @@ function ScoutPanel.create(Kit, State)
 					name = "Caption",
 					text = "GENETINĖS LUBOS (maks. pasiekiama statistika)",
 					bold = true,
-					textSize = 10,
+					textSize = 12,
 					color = C.textSecondary,
 					size = UDim2.new(1, 0, 0, 12),
 				})
@@ -303,7 +304,7 @@ function ScoutPanel.create(Kit, State)
 						parent = column,
 						name = "Name",
 						text = Kit.translate("stats", statId),
-						textSize = 11,
+						textSize = 12,
 						color = isBest and C.goldBright or C.textSecondary,
 						bold = isBest,
 						size = UDim2.new(1, 0, 0, 14),
@@ -332,8 +333,8 @@ function ScoutPanel.create(Kit, State)
 				Kit.label({
 					parent = capsBox,
 					name = "Locked",
-					text = "🔒  Genetinės lubos paslėptos -- Scout Report parodys, kiek kiekviena statistika gali užaugti.",
-					textSize = 11,
+					text = "🔒  Genetinės lubos paslėptos — Scout Report parodys, kiek kiekviena statistika gali užaugti.",
+					textSize = 12,
 					color = C.textSecondary,
 					size = UDim2.new(1, -24, 1, 0),
 					position = UDim2.new(0, 12, 0, 0),
@@ -357,7 +358,7 @@ function ScoutPanel.create(Kit, State)
 		if costMultiplier < 1 or cooldownMultiplier < 1 then
 			subText ..= string.format(" <font color=\"#608EBC\">Skauto nuolaida: -%d%% kaina.</font>", math.floor((1 - costMultiplier) * 100 + 0.5))
 		else
-			subText ..= " Pasamdyk Skautą (Personalas) -- paieška bus pigesnė."
+			subText ..= " Pasamdyk Skautą (Personalas) — paieška bus pigesnė."
 		end
 		searchSub.Text = subText
 
@@ -464,7 +465,7 @@ function ScoutPanel.create(Kit, State)
 			name = "Caption",
 			text = "VARŽOVŲ STATISTIKA",
 			bold = true,
-			textSize = 10,
+			textSize = 12,
 			color = C.textSecondary,
 			size = UDim2.new(1, 0, 0, 12),
 		})
@@ -502,7 +503,7 @@ function ScoutPanel.create(Kit, State)
 				parent = rangeBox,
 				name = "Mark" .. mark,
 				text = tostring(mark),
-				textSize = 10,
+				textSize = 12,
 				color = C.textSecondary,
 				align = mark == 0 and Enum.TextXAlignment.Left or (mark == 100 and Enum.TextXAlignment.Right or Enum.TextXAlignment.Center),
 				size = UDim2.new(0, 30, 0, 12),
@@ -558,8 +559,8 @@ function ScoutPanel.create(Kit, State)
 	Kit.label({
 		parent = wheelCard,
 		name = "Balanced",
-		text = "Balanced -- neutralus: neturi nei pranašumo, nei silpnybės.",
-		textSize = 11,
+		text = "Balanced — neutralus: neturi nei pranašumo, nei silpnybės.",
+		textSize = 12,
 		color = C.textSecondary,
 		size = UDim2.new(1, 0, 0, 16),
 		order = 99,

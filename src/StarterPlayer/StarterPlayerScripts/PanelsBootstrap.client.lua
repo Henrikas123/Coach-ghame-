@@ -33,7 +33,8 @@ local legacy = {}
 local warned = {}
 
 for key, moduleName in pairs(PANEL_MODULES) do
-	local moduleScript = panelsFolder:FindFirstChild(moduleName)
+	-- WaitForChild: modulis dar gali buti nereplikuotas bootstrap'o paleidimo metu
+	local moduleScript = panelsFolder:WaitForChild(moduleName, 5)
 	if moduleScript then
 		PanelKit.register(key, function()
 			local panelModule = require(moduleScript)
@@ -47,11 +48,22 @@ for key, moduleName in pairs(PANEL_MODULES) do
 	end
 end
 
+-- Seno UI funkcija apgaubiama: pries atidarant uzdarom musu paneles (kad langas neatsidurtu po backdrop)
+local function wrapLegacy(fn)
+	if type(fn) ~= "function" then
+		return fn
+	end
+	return function(...)
+		PanelKit.closeAll()
+		return fn(...)
+	end
+end
+
 local existing = _G.CoachAcademyPanels
 if type(existing) == "table" then
 	for key, fn in pairs(existing) do
 		if not owned[key] then
-			legacy[key] = fn
+			legacy[key] = wrapLegacy(fn)
 		end
 	end
 end
@@ -68,8 +80,19 @@ _G.CoachAcademyPanels = setmetatable({}, {
 			end
 			return
 		end
-		legacy[key] = value
+		legacy[key] = wrapLegacy(value)
 	end,
 })
+
+-- Paneles sukuriamos is anksto (po viena per kadra), kad pirmas atidarymas nestrigtu
+task.delay(2, function()
+	local keys = {}
+	for _, key in ipairs({ "Profile", "Academy", "Phone", "Tournament", "Staff", "Scout", "Sponsor" }) do
+		if owned[key] then
+			table.insert(keys, key)
+		end
+	end
+	PanelKit.prebuild(keys)
+end)
 
 print("PanelsBootstrap: HUD panelės užregistruotos.")

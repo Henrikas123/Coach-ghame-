@@ -74,6 +74,8 @@ local serverTimeOffset = 0
 local started = false
 local lastRefreshAt = -math.huge
 local refreshInFlight = false
+local pendingForce = false
+local REFRESH_TIMEOUT = 8
 
 -- ============================================================
 -- PRENUMERATOS
@@ -226,7 +228,7 @@ local function parseMarketingMessage(message)
 			kind = "post",
 			itemId = itemId,
 			title = postLabel,
-			text = string.format("+%s sekėjų  •  +%s reach", followersGain, reachGain),
+			text = string.format("+%s sekėjų  •  +%s pasiek.", followersGain, reachGain),
 			followers = tonumber(followersGain),
 			reach = tonumber(reachGain),
 		})
@@ -256,7 +258,7 @@ local function seedFeedFromPostTimes()
 				kind = "post",
 				itemId = itemId,
 				title = item.label,
-				text = "Paskelbta anksčiau",
+				text = string.format("+%d–%d sekėjų  •  +%d–%d pasiek.", item.followersMin, item.followersMax, item.reachMin, item.reachMax),
 				time = postedAt,
 			})
 		end
@@ -338,6 +340,10 @@ end
 
 function ClientState.refresh(force)
 	if refreshInFlight then
+		-- vykstanti uzklausa galejo prasideti pries pokyti -- priverstini atnaujinima pakartosim po jos
+		if force then
+			pendingForce = true
+		end
 		return
 	end
 	local now = os.clock()
@@ -346,6 +352,21 @@ function ClientState.refresh(force)
 	end
 	lastRefreshAt = now
 	refreshInFlight = true
+	local requestId = {}
+	ClientState._activeRequest = requestId
+	local function finish()
+		if ClientState._activeRequest ~= requestId then
+			return
+		end
+		ClientState._activeRequest = nil
+		refreshInFlight = false
+		if pendingForce then
+			pendingForce = false
+			ClientState.refresh(true)
+		end
+	end
+	-- apsauga: jei serveris neatsako, po REFRESH_TIMEOUT leidziam naujas uzklausas
+	task.delay(REFRESH_TIMEOUT, finish)
 	task.spawn(function()
 		local snapshotRemote = remotes and remotes:WaitForChild("PanelSnapshot", 10)
 		if snapshotRemote and snapshotRemote:IsA("RemoteFunction") then
@@ -353,12 +374,14 @@ function ClientState.refresh(force)
 				return snapshotRemote:InvokeServer()
 			end)
 			if ok then
-				applySnapshot(result)
+				if ClientState._activeRequest == requestId then
+					applySnapshot(result)
+				end
 			else
 				warn("ClientState: PanelSnapshot klaida: " .. tostring(result))
 			end
 		end
-		refreshInFlight = false
+		finish()
 	end)
 end
 
@@ -390,7 +413,7 @@ function ClientState.fire(remoteName, ...)
 		remote:FireServer(...)
 		return true
 	end
-	warn("ClientState: negaliu issiusti '" .. tostring(remoteName) .. "' -- RemoteEvent nerastas")
+	warn("ClientState: negaliu issiusti '" .. tostring(remoteName) .. "' — RemoteEvent nerastas")
 	return false
 end
 

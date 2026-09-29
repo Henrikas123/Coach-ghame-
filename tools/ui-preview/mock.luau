@@ -68,6 +68,10 @@ local function recordWarn(...)
 	local message = table.concat(parts, " ")
 	table.insert(world.warnings, message)
 	print("[warn] " .. message)
+	-- skriptu "sugauti" klaidos (pcall + warn) irgi yra klaidos
+	if string.find(message, "nepavyko sukurti", 1, true) or string.find(message, "klaida", 1, true) then
+		table.insert(world.errors, "(warn) " .. message)
+	end
 end
 
 -- ============================================================
@@ -319,6 +323,7 @@ local DEFAULTS = {
 		ElasticBehavior = Enum.ElasticBehavior.WhenScrollable, BackgroundColor3 = C(255, 255, 255), Active = true,
 		TopImage = "rbxasset://textures/ui/Scroll/scroll-top.png", MidImage = "rbxasset://textures/ui/Scroll/scroll-middle.png",
 		BottomImage = "rbxasset://textures/ui/Scroll/scroll-bottom.png",
+		AbsoluteCanvasSize = Vector2.new(0, 0), AbsoluteWindowSize = Vector2.new(0, 0),
 	},
 	CanvasGroup = { GroupTransparency = 0, GroupColor3 = C(255, 255, 255) },
 	UICorner = { CornerRadius = UDim.new(0, 8) },
@@ -964,6 +969,11 @@ classMethods.TweenService = {
 		tween.Completed = Signal.new("Completed")
 		local token = {}
 		function tween:Play()
+			if (info.RepeatCount or 0) < 0 then
+				-- begalinis ciklas (pvz. pulsavimas): perziurai paliekam pradine busena
+				tween.PlaybackState = Enum.PlaybackState.Playing
+				return
+			end
 			activeTweens[instance] = activeTweens[instance] or {}
 			for prop in pairs(goals) do
 				activeTweens[instance][prop] = token
@@ -1133,6 +1143,24 @@ classMethods.TextBox = {
 	IsFocused = function()
 		return false
 	end,
+}
+classMethods.TextService = {
+	FilterStringAsync = function(_, text)
+		task.wait(0.05)
+		return setmetatable({
+			GetNonChatStringForBroadcastAsync = function()
+				return text
+			end,
+			GetNonChatStringForUserAsync = function()
+				return text
+			end,
+		}, { __mocktype = "Instance" })
+	end,
+}
+classMethods.ContextActionService = {
+	BindAction = function() end,
+	BindActionAtPriority = function() end,
+	UnbindAction = function() end,
 }
 classMethods.HttpService = {
 	JSONEncode = function(_, value)

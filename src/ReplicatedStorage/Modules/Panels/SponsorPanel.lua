@@ -54,12 +54,14 @@ function SponsorPanel.create(Kit, State)
 	local scroll = Kit.scroll({
 		parent = panel.Body,
 		name = "Content",
+		size = UDim2.new(1, -8, 1, -10),
 		paddingTop = 16,
 		paddingBottom = 20,
 		paddingLeft = 20,
-		paddingRight = 16,
+		paddingRight = 8,
 		spacing = 12,
 	})
+	Kit.scrollFade(scroll)
 
 	-- ========================================================
 	-- SUVESTINE + PAIESKA
@@ -85,7 +87,7 @@ function SponsorPanel.create(Kit, State)
 			name = "Caption",
 			text = caption,
 			bold = true,
-			textSize = 11,
+			textSize = 12,
 			color = C.textSecondary,
 			size = UDim2.new(1, 0, 0, 14),
 		})
@@ -102,7 +104,7 @@ function SponsorPanel.create(Kit, State)
 			parent = block,
 			name = "Sub",
 			text = "",
-			textSize = 11,
+			textSize = 12,
 			color = C.textSecondary,
 			size = UDim2.new(1, 0, 0, 14),
 			position = UDim2.new(0, 0, 1, -14),
@@ -138,7 +140,7 @@ function SponsorPanel.create(Kit, State)
 		name = "RefreshCaption",
 		text = "",
 		bold = true,
-		textSize = 11,
+		textSize = 12,
 		color = C.textSecondary,
 		align = Enum.TextXAlignment.Right,
 		size = UDim2.new(0, 210, 0, 14),
@@ -205,7 +207,7 @@ function SponsorPanel.create(Kit, State)
 			if untilExpire <= 0 then
 				timer.button.SetEnabled(true)
 				timer.button.SetVariant("ghost")
-				timer.button.SetText("Sutartis baigėsi -- uždaryti")
+				timer.button.SetText("Sutartis baigėsi — uždaryti")
 				timer.bar.Set(1)
 				timer.caption.Text = "Sutartis baigėsi"
 			elseif untilCollect <= 0 then
@@ -281,7 +283,7 @@ function SponsorPanel.create(Kit, State)
 			Kit.label({
 				parent = empty,
 				name = "Text",
-				text = "📭  Dar neturi rėmėjų. Ieškok pasiūlymų -- pasirašymo bonusas iškart papildys biudžetą.",
+				text = "📭  Dar neturi rėmėjų. Ieškok pasiūlymų — pasirašymo bonusas iškart papildys biudžetą.",
 				textSize = 12,
 				color = C.textSecondary,
 				wrap = true,
@@ -323,7 +325,7 @@ function SponsorPanel.create(Kit, State)
 					parent = cardFrame,
 					name = "Expires",
 					text = "",
-					textSize = 11,
+					textSize = 12,
 					color = C.textSecondary,
 					size = UDim2.new(1, -320, 0, 14),
 					position = UDim2.new(0, 82, 0, 58),
@@ -401,7 +403,7 @@ function SponsorPanel.create(Kit, State)
 					parent = cardFrame,
 					name = "Duration",
 					text = string.format("Trukmė %d min  •  %s", math.floor(sponsor.durationSeconds / 60), Kit.stars(sponsor.minStars)),
-					textSize = 11,
+					textSize = 12,
 					color = C.textSecondary,
 					size = UDim2.new(1, -80, 0, 14),
 					position = UDim2.new(0, 68, 0, 37),
@@ -468,7 +470,7 @@ function SponsorPanel.create(Kit, State)
 					parent = row,
 					name = "Terms",
 					text = string.format("Bonusas %s  •  %s / %d min", Kit.formatMoney(sponsor.signingBonus), Kit.formatMoney(sponsor.incomePerCycle), math.floor(SponsorConfig.CollectCycleSeconds / 60)),
-					textSize = 11,
+					textSize = 12,
 					color = C.textSecondary,
 					size = UDim2.new(0.5, -120, 1, 0),
 					position = UDim2.new(0.5, 0, 0, 0),

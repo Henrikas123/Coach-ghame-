@@ -5,6 +5,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
+local TextService = game:GetService("TextService")
 
 local AcademyConfig = require(ReplicatedStorage.Modules.AcademyConfig)
 
@@ -76,8 +77,9 @@ local function applyToWorkspace(profile)
 	end
 end
 
-local function push(player, profile)
+local function push(player, profile, message)
 	AcademyUpdate:FireClient(player, {
+		message = message,
 		academyName = profile.academyName,
 		wallColorIndex = profile.wallColorIndex,
 		logoIndex = profile.logoIndex,
@@ -106,27 +108,58 @@ AcademyCustomize.OnServerEvent:Connect(function(player, data)
 		return
 	end
 
-	if type(data.wallColorIndex) == "number" then
-		profile.wallColorIndex = math.clamp(math.floor(data.wallColorIndex), 1, #AcademyConfig.WallColors)
+	-- Indeksai: tik baigtiniai skaiciai (NaN/inf praeina pro math.clamp ir sugadintu issaugojima)
+	local function validIndex(value, count)
+		if type(value) ~= "number" or value ~= value or value == math.huge or value == -math.huge then
+			return nil
+		end
+		return math.clamp(math.floor(value), 1, count)
 	end
-	if type(data.logoIndex) == "number" then
-		profile.logoIndex = math.clamp(math.floor(data.logoIndex), 1, #AcademyConfig.Logos)
+
+	local wallIndex = validIndex(data.wallColorIndex, #AcademyConfig.WallColors)
+	if wallIndex then
+		profile.wallColorIndex = wallIndex
 	end
-	if type(data.floorColorIndex) == "number" and AcademyConfig.FloorOptions then
-		profile.floorColorIndex = math.clamp(math.floor(data.floorColorIndex), 1, #AcademyConfig.FloorOptions)
+	local logoIndex = validIndex(data.logoIndex, #AcademyConfig.Logos)
+	if logoIndex then
+		profile.logoIndex = logoIndex
 	end
+	if AcademyConfig.FloorOptions then
+		local floorIndex = validIndex(data.floorColorIndex, #AcademyConfig.FloorOptions)
+		if floorIndex then
+			profile.floorColorIndex = floorIndex
+		end
+	end
+
+	local message = nil
 	if type(data.academyName) == "string" then
 		local trimmed = data.academyName:gsub("^%s+", ""):gsub("%s+$", "")
-		if #trimmed == 0 then
-			trimmed = AcademyConfig.DefaultName
-		elseif #trimmed > AcademyConfig.MaxNameLength then
-			trimmed = string.sub(trimmed, 1, AcademyConfig.MaxNameLength)
+		if utf8.len(trimmed) == nil then
+			-- netinkamas UTF-8 -- DataStore tokio teksto neissaugotu
+			message = "Pavadinime yra netinkamų simbolių — nepakeista."
+		else
+			if #trimmed == 0 then
+				trimmed = AcademyConfig.DefaultName
+			elseif utf8.len(trimmed) > AcademyConfig.MaxNameLength then
+				-- trumpinam simboliais, ne baitais (lietuviskos raides uzima 2 baitus)
+				trimmed = string.sub(trimmed, 1, utf8.offset(trimmed, AcademyConfig.MaxNameLength + 1) - 1)
+			end
+			-- Pavadinimas matomas visiems ant iskabos -- privalomas Roblox teksto filtravimas
+			local ok, filtered = pcall(function()
+				local result = TextService:FilterStringAsync(trimmed, player.UserId)
+				return result:GetNonChatStringForBroadcastAsync()
+			end)
+			if ok and type(filtered) == "string" then
+				profile.academyName = filtered
+			else
+				message = "Nepavyko patikrinti pavadinimo — bandyk dar kartą."
+				warn("AcademyHandler: teksto filtravimas nepavyko", player.Name, filtered)
+			end
 		end
-		profile.academyName = trimmed
 	end
 
 	applyToWorkspace(profile)
-	push(player, profile)
+	push(player, profile, message)
 end)
 
 print("AcademyHandler paruoštas.")
