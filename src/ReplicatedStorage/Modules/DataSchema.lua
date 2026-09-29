@@ -95,8 +95,12 @@ function DataSchema.potentialLabelFromCaps(caps)
 	end
 end
 
+-- Issaugojimo schemos versija (DataStoreHandler papildo senus issaugojimus truksta laukais)
+DataSchema.DataVersion = 2
+
 function DataSchema.newPlayerProfile()
 	return {
+		dataVersion = DataSchema.DataVersion,
 		pinigai = 500,
 		followers = 0,
 		reputacija = 0, -- bendras patirties/pergalių skaitiklis, naudojamas reputacijos lygiui skaičiuoti
@@ -118,6 +122,12 @@ function DataSchema.newPlayerProfile()
 		lastSponsorRefresh = 0, -- os.time() kada paskutini karta ieskota remeju
 
 		lastTournamentAt = 0, -- os.time() paskutinio turnyro, cooldown skaiciavimui
+
+		-- Grizimo sistemos (RetentionHandler)
+		daily = { lastClaimDay = 0, streak = 0 }, -- kasdienis prizas: UTC diena (os.time() // 86400) ir serija
+		quests = { day = 0, list = {} }, -- kasdienes uzduotys: { id, progress, claimed }
+		tutorial = { step = 0, done = false }, -- pamoka pirmoms minutems (0 = dar neprasidejo)
+		lifetimeFightsWon = 0, -- lyderiu lentai ir uzduotims
 	}
 end
 

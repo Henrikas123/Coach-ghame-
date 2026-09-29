@@ -203,6 +203,7 @@ mock.touchEnabled = scenario.viewport == "phone"
 -- ------------------------------------------------------------
 -- Boot: server -> player join -> client
 -- ------------------------------------------------------------
+mock.dataStore = scenario.datastore -- nil = DataStore nepasiekiamas (kaip nepublikuotas place)
 for _, s in ipairs(serverScripts) do
 	mock.runScript(s, "server:" .. s.Name)
 end
@@ -234,11 +235,11 @@ mock.advance(0.1)
 local dataApi = mock.sharedG.CoachAcademyData
 if not dataApi then print("NO DATA API", #world.errors) for _, l in ipairs(world.logs) do print(l) end end
 local profile = dataApi and dataApi.getProfile(player)
-if not profile then
+if not profile and not scenario.allowNoProfile then
 	error("profile not loaded")
 end
 local now = world.epoch + math.floor(world.now)
-if scenario.seed then
+if scenario.seed and profile then
 	scenario.seed(profile, now)
 end
 
@@ -317,6 +318,20 @@ function api.profile()
 end
 function api.state()
 	return mock
+end
+function api.world()
+	return world
+end
+function api.data()
+	return mock.sharedG.CoachAcademyData
+end
+function api.player()
+	return player
+end
+-- paleidzia funkcija mock planuoklyje (kaip serverio koda) ir palaukia virtualu laika
+function api.serverRun(fn, seconds)
+	mock.task.spawn(fn)
+	mock.advance(seconds or 5)
 end
 
 if scenario.run then

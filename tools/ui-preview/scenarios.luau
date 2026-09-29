@@ -529,6 +529,68 @@ S.tournament_tape = {
 		api.scroll("Panel_Tournament/Detail", 520)
 	end,
 }
+-- ============================================================
+-- DUOMENU SAUGUMAS (DataStoreHandler su atminties DataStore)
+-- ============================================================
+local KEY = "Player_4815162342"
+local function legacySave()
+	-- senas formatas: profilis irasytas tiesiogiai, be naujuju lauku
+	return { pinigai = 1234, reputacija = 7, coachReputationTier = 2, studentsList = {}, followers = 50 }
+end
+S.ds_roundtrip = {
+	datastore = { data = { [KEY] = legacySave() } },
+	allowNoProfile = true,
+	run = function(api)
+		local profile = api.data().getProfile(api.player())
+		assert(profile, "profile not loaded")
+		assert(profile.pinigai == 1234, "legacy money lost")
+		assert(profile.daily and profile.daily.streak == 0, "new fields not filled in")
+		assert(profile.dataVersion == 2, "dataVersion not set")
+		profile.pinigai = 777
+		profile.reputacija = 0 / 0 -- NaN would break every save
+		api.serverRun(function()
+			api.data().flushAll()
+		end)
+	end,
+	check = function(api)
+		local stored = api.state().dataStore.data[KEY]
+		assert(stored.format == 2 and type(stored.profile) == "table", "not saved in the new format")
+		assert(stored.profile.pinigai == 777, "money not saved")
+		assert(stored.profile.reputacija == 0, "NaN not cleaned")
+		assert(stored.lockedBy == nil, "lock not released on shutdown")
+	end,
+}
+S.ds_load_fail = {
+	datastore = { data = { [KEY] = legacySave() }, failCalls = 99 },
+	allowNoProfile = true,
+	bootWait = 45,
+	run = function(api)
+		api.serverRun(function()
+			api.data().flushAll()
+		end)
+	end,
+	check = function(api)
+		assert(api.data().getProfile(api.player()) == nil, "an empty profile was handed out")
+		assert(api.world().kicked, "player was not asked to rejoin")
+		local stored = api.state().dataStore.data[KEY]
+		assert(stored.pinigai == 1234, "real save was overwritten")
+	end,
+}
+S.ds_locked = {
+	datastore = {
+		data = { [KEY] = { format = 2, lockedBy = "other-server", lockedAt = 1790000000, savedAt = 1790000000, profile = legacySave() } },
+	},
+	allowNoProfile = true,
+	bootWait = 45,
+	run = function(api)
+		local profile = api.data().getProfile(api.player())
+		assert(profile and profile.pinigai == 1234, "profile not taken over after waiting for the other server")
+	end,
+	check = function(api)
+		local stored = api.state().dataStore.data[KEY]
+		assert(stored.lockedBy ~= "other-server", "lock not taken over")
+	end,
+}
 S.tournament_fresh = { seed = freshSeed, run = function(api) api.open("Tournament") end }
 S.flow_tournament_enter = {
 	seed = richSeed,

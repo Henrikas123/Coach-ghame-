@@ -1181,9 +1181,96 @@ specialGetters.UserInputService = {
 		return false
 	end,
 }
+-- DataStore: pagal nutylejima nepasiekiamas (kaip nepublikuotas place). Scenarijus gali ijungti
+-- atminties DataStore (M.dataStore = { data = {}, failCalls = n }) gedimu ir uzraktu testams.
+local function copyDeep(value)
+	if type(value) ~= "table" then
+		return value
+	end
+	local out = {}
+	for k, v in pairs(value) do
+		out[k] = copyDeep(v)
+	end
+	return out
+end
+local function mockStoreFail(cfg, op)
+	task.wait(0.05)
+	if (cfg.failCalls or 0) > 0 then
+		cfg.failCalls -= 1
+		table.insert(cfg.log, op .. ":fail")
+		error("502: API Services rejected request (mock)")
+	end
+end
 classMethods.DataStoreService = {
-	GetDataStore = function()
-		error("DataStoreService: mock -- not available (like an unpublished place)")
+	GetDataStore = function(_, name)
+		local cfg = M.dataStore
+		if not cfg then
+			error("DataStoreService: mock -- not available (like an unpublished place)")
+		end
+		cfg.data = cfg.data or {}
+		cfg.log = cfg.log or {}
+		local store = { Name = name }
+		function store:GetAsync(key)
+			mockStoreFail(cfg, "get")
+			return copyDeep(cfg.data[key])
+		end
+		function store:SetAsync(key, value)
+			mockStoreFail(cfg, "set")
+			cfg.data[key] = copyDeep(value)
+		end
+		function store:UpdateAsync(key, transform)
+			mockStoreFail(cfg, "update")
+			local result = transform(copyDeep(cfg.data[key]))
+			if result ~= nil then
+				cfg.data[key] = copyDeep(result)
+			end
+			table.insert(cfg.log, "update:" .. key)
+			return result
+		end
+		return store
+	end,
+	GetOrderedDataStore = function(_, name)
+		local cfg = M.dataStore
+		if not cfg then
+			error("DataStoreService: mock -- not available (like an unpublished place)")
+		end
+		cfg.ordered = cfg.ordered or {}
+		cfg.ordered[name] = cfg.ordered[name] or {}
+		local values = cfg.ordered[name]
+		local store = { Name = name }
+		function store:SetAsync(key, value)
+			mockStoreFail(cfg, "oset")
+			values[key] = math.floor(value)
+		end
+		function store:GetSortedAsync(ascending, pageSize)
+			mockStoreFail(cfg, "osorted")
+			local rows = {}
+			for key, value in pairs(values) do
+				table.insert(rows, { key = key, value = value })
+			end
+			table.sort(rows, function(a, b)
+				if ascending then
+					return a.value < b.value
+				end
+				return a.value > b.value
+			end)
+			local page = {}
+			for i = 1, math.min(pageSize or 50, #rows) do
+				page[i] = rows[i]
+			end
+			return {
+				IsFinished = true,
+				GetCurrentPage = function()
+					return page
+				end,
+			}
+		end
+		return store
+	end,
+}
+classMethods.Player = {
+	Kick = function(self, message)
+		world.kicked = message or ""
 	end,
 }
 classMethods.Players = {

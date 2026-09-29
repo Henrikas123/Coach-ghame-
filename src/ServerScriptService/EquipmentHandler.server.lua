@@ -36,7 +36,7 @@ Players.PlayerAdded:Connect(function(player)
 	task.wait(0.6)
 	local profile = dataApi and dataApi.getProfile(player)
 	local tries = 0
-	while not profile and tries < 100 do
+	while not profile and tries < 1200 do -- iki 60 s: profilis gali krautis su pakartojimais
 		task.wait(0.05)
 		profile = dataApi and dataApi.getProfile(player)
 		tries += 1
@@ -54,7 +54,7 @@ EquipmentPurchaseRequest.OnServerEvent:Connect(function(player, itemId)
 	end
 	local profile = dataApi and dataApi.getProfile(player)
 	local tries = 0
-	while not profile and tries < 100 do
+	while not profile and tries < 1200 do -- iki 60 s: profilis gali krautis su pakartojimais
 		task.wait(0.05)
 		profile = dataApi and dataApi.getProfile(player)
 		tries += 1
