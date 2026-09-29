@@ -1,3 +1,4 @@
 cache/
 out/
 shots/
+__pycache__/

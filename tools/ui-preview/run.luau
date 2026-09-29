@@ -92,6 +92,9 @@ local Workspace = mock.getService("Workspace")
 mock.getService("StarterGui")
 mock.getService("StarterPlayer")
 
+local Lighting = mock.getService("Lighting")
+make("DepthOfFieldEffect", "DepthOfField", Lighting, { Enabled = false })
+
 local camera = rawInstance("Camera")
 camera.Name = "Camera"
 camera.Parent = Workspace
@@ -101,6 +104,7 @@ local modulesFolder = make("Folder", "Modules", ReplicatedStorage)
 local MODULES = {
 	"DataSchema", "TrainingConfig", "EquipmentConfig", "MarketingConfig", "FightConfig", "AcademyConfig",
 	"InjuryConfig", "StaffConfig", "ScoutConfig", "SponsorConfig", "TournamentConfig", "MainHUDController",
+	"SoundConfig", "Sfx",
 }
 for _, name in ipairs(MODULES) do
 	local source = readFirst({
@@ -243,6 +247,15 @@ local starterScripts = {}
 local clientList = scenario.legacyScripts and { "MainHUDBootstrap", "PanelsBootstrap", "ReputationUI", "AcademyUI", "PhoneUI" }
 	or { "MainHUDBootstrap", "PanelsBootstrap", "ReputationUI" }
 local playerScripts = make("Folder", "PlayerScripts", player)
+if scenario.intro then
+	-- krovimo ekranas (ReplicatedFirst) paleidziamas pirmas, tada titulinis ekranas
+	local loadingSource = readFirst({
+		SRC .. "/ReplicatedFirst/LoadingScreen.client.lua",
+		"place:ReplicatedFirst/LoadingScreen",
+	})
+	table.insert(starterScripts, scriptInstance("LocalScript", "LoadingScreen", mock.getService("ReplicatedFirst"), loadingSource))
+	table.insert(clientList, "TitleScreen")
+end
 for _, name in ipairs(clientList) do
 	local source = readFirst({
 		SRC .. "/StarterPlayer/StarterPlayerScripts/" .. name .. ".client.lua",
@@ -255,7 +268,7 @@ end
 for _, s in ipairs(starterScripts) do
 	mock.runScript(s, "client:" .. s.Name)
 end
-mock.advance(3)
+mock.advance(scenario.bootWait or 3)
 
 -- ------------------------------------------------------------
 -- Scenario actions
@@ -309,7 +322,7 @@ end
 if scenario.run then
 	scenario.run(api)
 end
-mock.advance(1.5)
+mock.advance(scenario.settle or 1.5)
 
 -- ------------------------------------------------------------
 -- Output

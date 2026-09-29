@@ -47,11 +47,11 @@ def fetch_api():
 
 def fetch_fonts():
     os.makedirs(FONTS, exist_ok=True)
-    css = get("https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700&family=Noto+Color+Emoji&display=swap").decode()
+    css = get("https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700;900&family=Oswald:wght@400&family=Noto+Color+Emoji&display=swap").decode()
     out = []
     for n, (_, subset, body) in enumerate(re.findall(r"(/\* ([^*]*?) \*/\s*)?@font-face \{(.*?)\}", css, re.S)):
         family = re.search(r"font-family: '([^']+)'", body).group(1)
-        if family == "Montserrat" and subset not in ("latin", "latin-ext"):
+        if family in ("Montserrat", "Oswald") and subset not in ("latin", "latin-ext"):
             continue
         url = re.search(r"url\((.*?)\)", body).group(1)
         name = f"f{n}.woff2"

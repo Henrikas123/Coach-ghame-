@@ -494,6 +494,31 @@ S.tournament_career = {
 		api.click("Panel_Tournament/Tabs/Tab_career")
 	end,
 }
+-- ============================================================
+-- LOADING / TITLE
+-- ============================================================
+S.loading = { seed = richSeed, intro = true, bootWait = 1.9, settle = 0 }
+S.loading_phone = { seed = richSeed, intro = true, viewport = "phone", bootWait = 1.9, settle = 0 }
+S.loading_intro = { seed = richSeed, intro = true, bootWait = 3.55, settle = 0 }
+S.title = { seed = richSeed, intro = true, bootWait = 12 }
+S.title_new = { seed = freshSeed, intro = true, bootWait = 12 }
+S.title_phone = { seed = richSeed, intro = true, viewport = "phone", bootWait = 12 }
+S.flow_play = {
+	seed = richSeed,
+	intro = true,
+	bootWait = 12,
+	run = function(api)
+		api.click("CoachTitleScreen/Content/TitleBlock/PlayButton")
+		api.wait(1.5)
+	end,
+	check = function(api)
+		local playerGui = api.find("MainHUD_Premium").Parent
+		assert(playerGui:FindFirstChild("CoachTitleScreen") == nil, "title screen still exists")
+		assert(playerGui:FindFirstChild("CoachLoadingScreen") == nil, "loading screen still exists")
+		assert(api.find("MainHUD_Premium").Enabled == true, "HUD not re-enabled")
+		assert(playerGui.Parent:GetAttribute("CoachIntro") == "playing", "intro state not playing")
+	end,
+}
 S.tournament_fresh = { seed = freshSeed, run = function(api) api.open("Tournament") end }
 S.flow_tournament_enter = {
 	seed = richSeed,

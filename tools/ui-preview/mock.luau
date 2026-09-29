@@ -649,7 +649,18 @@ function baseMethods.GetAttribute(self, name)
 	return internal[self].attributes[name]
 end
 function baseMethods.SetAttribute(self, name, value)
-	internal[self].attributes[name] = value
+	local data = internal[self]
+	local changed = data.attributes[name] ~= value
+	data.attributes[name] = value
+	local signal = data.changedSignals["@" .. name]
+	if changed and signal then
+		signal:Fire()
+	end
+end
+function baseMethods.GetAttributeChangedSignal(self, name)
+	local data = internal[self]
+	data.changedSignals["@" .. name] = data.changedSignals["@" .. name] or Signal.new("AttributeChanged:" .. name)
+	return data.changedSignals["@" .. name]
 end
 function baseMethods.GetAttributes(self)
 	return table.clone(internal[self].attributes)
@@ -1017,6 +1028,29 @@ classMethods.TweenService = {
 -- ============================================================
 -- SERVICES / DATAMODEL
 -- ============================================================
+-- Roblox Random (deterministinis LCG)
+MockRandom = {}
+MockRandom.__index = MockRandom
+function MockRandom.new(seed)
+	local self = setmetatable({}, MockRandom)
+	self.state = math.floor(math.abs(seed or os.time())) % 2147483647
+	if self.state == 0 then
+		self.state = 1
+	end
+	return self
+end
+function MockRandom:_next()
+	self.state = (self.state * 16807) % 2147483647
+	return self.state / 2147483647
+end
+function MockRandom:NextNumber(minValue, maxValue)
+	minValue, maxValue = minValue or 0, maxValue or 1
+	return minValue + (maxValue - minValue) * self:_next()
+end
+function MockRandom:NextInteger(minValue, maxValue)
+	return math.min(maxValue, minValue + math.floor((maxValue - minValue + 1) * self:_next()))
+end
+
 local game = M.rawInstance("DataModel")
 internal[game].Name = "Game"
 M.game = game
@@ -1072,7 +1106,49 @@ classMethods.GuiService = {
 		return Vector2.new(0, M.topInset or 58), Vector2.new(0, 0)
 	end,
 }
+classMethods.ContentProvider = {
+	PreloadAsync = function(_, items, callback)
+		for _, item in ipairs(items or {}) do
+			task.wait(0.05)
+			if callback then
+				callback(typeof(item) == "string" and item or "rbxasset://mock", Enum.AssetFetchStatus.Success)
+			end
+		end
+	end,
+}
+classMethods.ReplicatedFirst = {
+	RemoveDefaultLoadingScreen = function()
+		world.defaultLoadingRemoved = true
+	end,
+	IsFinishedReplicating = function()
+		return true
+	end,
+}
+world.coreGui = {}
+classMethods.StarterGui = {
+	SetCoreGuiEnabled = function(_, coreType, enabled)
+		world.coreGui[coreType.Name] = enabled
+	end,
+	GetCoreGuiEnabled = function(_, coreType)
+		return world.coreGui[coreType.Name] ~= false
+	end,
+	SetCore = function() end,
+	GetCore = function()
+		return nil
+	end,
+}
+classMethods.Sound = {
+	Play = function(self)
+		world.soundsPlayed = world.soundsPlayed or {}
+		table.insert(world.soundsPlayed, self.Name)
+	end,
+	Stop = function() end,
+	Pause = function() end,
+	Resume = function() end,
+}
 classMethods.RunService = {
+	BindToRenderStep = function() end,
+	UnbindFromRenderStep = function() end,
 	IsStudio = function()
 		return false
 	end,
@@ -1206,6 +1282,7 @@ local function makeEnv(scriptInstance, context)
 	env.BrickColor = roblox.BrickColor
 	env.Font = roblox.Font
 	env.TweenInfo = TweenInfo
+	env.Random = MockRandom
 	env.task = task
 	env.wait = task.wait
 	env.delay = task.delay

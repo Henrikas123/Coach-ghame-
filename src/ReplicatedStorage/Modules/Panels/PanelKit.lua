@@ -77,10 +77,10 @@ PanelKit.Accents = ACCENTS
 -- ============================================================
 -- BAZINES PAGALBINES FUNKCIJOS
 -- ============================================================
-function PanelKit.tween(instance, duration, props, style, direction)
+function PanelKit.tween(instance, duration, props, style, direction, repeatCount, reverses)
 	local tween = TweenService:Create(
 		instance,
-		TweenInfo.new(duration, style or Enum.EasingStyle.Quad, direction or Enum.EasingDirection.Out),
+		TweenInfo.new(duration, style or Enum.EasingStyle.Quad, direction or Enum.EasingDirection.Out, repeatCount or 0, reverses == true),
 		props
 	)
 	tween:Play()

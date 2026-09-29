@@ -21,7 +21,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'playwright');
     await page.evaluate(() => document.fonts.ready);
     // warm up fonts (emoji + both weights) before measuring
     await page.evaluate(async () => {
-      const probes = ['500 16px Montserrat', '700 16px Montserrat', '16px "Noto Color Emoji"'];
+      const probes = ['500 16px Montserrat', '700 16px Montserrat', '900 16px Montserrat', '400 16px Oswald', '16px "Noto Color Emoji"'];
       for (const f of probes) { try { await document.fonts.load(f, 'AaĄčŠž 🥊🏆📱'); } catch (e) {} }
     });
     const issues = await page.evaluate(d => window.renderScene(d, { debug: false }), data);

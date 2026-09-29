@@ -39,6 +39,8 @@ let measureCtx = null;
 
 function fontSpec(fontName) {
   const bold = /Bold|Black|Heavy|SemiBold/.test(fontName || '');
+  if (/Oswald/.test(fontName || '')) return { family: "'Oswald', 'Noto Color Emoji'", weight: 400 };
+  if (/GothamBlack/.test(fontName || '')) return { family: "'Montserrat', 'Noto Color Emoji'", weight: 900 };
   if (/Gotham|Montserrat/.test(fontName || '')) return { family: "'Montserrat', 'Noto Color Emoji'", weight: bold ? 700 : 500 };
   return { family: "'Liberation Sans', 'Noto Color Emoji'", weight: bold ? 700 : 400 };
 }
@@ -367,8 +369,12 @@ function renderNode(node, parentAbs, debug) {
   const scale = firstChild(node, 'UIScale');
   const ap = p.AnchorPoint || { x: 0, y: 0 };
   let transform = '';
+  // Roblox: UIScale skaleja apie AnchorPoint, o Rotation suka apie centra
   if (scale && scale.p.Scale !== 1) transform += ` scale(${scale.p.Scale})`;
-  if (p.Rotation) transform += ` rotate(${p.Rotation}deg)`;
+  if (p.Rotation) {
+    const dx = (0.5 - ap.x) * node.abs.w, dy = (0.5 - ap.y) * node.abs.h;
+    transform += ` translate(${dx}px, ${dy}px) rotate(${p.Rotation}deg) translate(${-dx}px, ${-dy}px)`;
+  }
   if (transform) { el.style.transform = transform; el.style.transformOrigin = `${ap.x*100}% ${ap.y*100}%`; }
 
   const radius = cornerRadius(node);

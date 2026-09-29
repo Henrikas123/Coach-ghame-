@@ -6,6 +6,7 @@
 --   * ReplicatedStorage/Modules: atnaujina/prideda modulius is src/ReplicatedStorage/Modules/*.lua
 --     ir sukuria Panels aplanka is src/ReplicatedStorage/Modules/Panels/*.lua
 --   * ServerScriptService: atnaujina/prideda Script'us is src/ServerScriptService/*.server.lua
+--   * ReplicatedFirst: krovimo ekranas is src/ReplicatedFirst/*.client.lua
 --   * StarterPlayerScripts: atnaujina/prideda LocalScript'us is src/StarterPlayer/StarterPlayerScripts/*.client.lua
 --   * Remotes: prideda PanelSnapshot (RemoteFunction) ir ScoutReportRequest (RemoteEvent)
 --   * Senus UI skriptus, kuriuos pakeite naujos paneles, perkelia i ServerStorage/LegacyUI (ten jie nesileidzia)
@@ -95,6 +96,14 @@ end
 note("ServerScriptService:")
 for _, file in ipairs(listLua(SRC .. "/ServerScriptService", ".server.lua")) do
 	upsertScript(ServerScriptService, "Script", file.name, fs.readFile(file.path))
+end
+
+note("ReplicatedFirst:")
+local ReplicatedFirst = game:GetService("ReplicatedFirst")
+if fs.isDir(SRC .. "/ReplicatedFirst") then
+	for _, file in ipairs(listLua(SRC .. "/ReplicatedFirst", ".client.lua")) do
+		upsertScript(ReplicatedFirst, "LocalScript", file.name, fs.readFile(file.path))
+	end
 end
 
 note("StarterPlayerScripts:")
