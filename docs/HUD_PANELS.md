@@ -61,6 +61,47 @@ Visų panelių bendras stilius:
 - **Pabaiga:** WINNER / DEFEAT kortelė, pergalės atveju konfeti ir minios garsas.
 - **Serveris daro pauzes** (`FightConfig.IntroSeconds`, `RoundRevealSeconds`), kad animacijos spėtų.
 
+## 4a-2. 3D kovotojai UI viduje (`FighterAppearance`, `FighterRigBuilder`)
+Kiekvienas kovotojas turi savo 3D veikėją. Išvaizda generuojama iš vardo, todėl tas pats vardas visada atrodo vienodai, o skirtingi vardai skiriasi:
+- odos spalva (7 tonai);
+- šortai (10 spalvų) su juostele ir šoniniais dryžiais;
+- pirštinės (6 spalvos) su rankogaliais;
+- batai;
+- galvos juosta (ne visi);
+- šukuosena: plika, trumpa, ilgesnė, mohikanas, kuodelis, afro;
+- stovėsena: kas penktas kairiarankis (southpaw), jo poza veidrodinė.
+
+**Kaip veikia:**
+- Modelių kurti nereikia. Serveris (`FighterRigBuilder`) paleidimo metu vieną kartą sukuria paprastą R15 kūną į `ReplicatedStorage.FighterRig`.
+- Klientas kūną nukopijuoja, sustato į bokso stovėseną (arba pergalės pozą), aprengia ir parodo `ViewportFrame` viduje.
+- **Gražesnis kūnas:** jei Studio įdėsi savo R15 modelį pavadinimu `FighterRig` į `ReplicatedStorage`, bus naudojamas jis.
+- **Veidas:** `FighterAppearance.FaceTexture` (tuščias = numatytasis Roblox veidas).
+- Jei kūno nėra, rodomos vardo raidės, todėl niekas nesulūžta.
+
+**Kur rodomi:**
+- **Akademija:** kovotojų sąraše kiekvienas turi kolekcinę kortelę su 3D portretu ir OVR. Pasirinkto kovotojo 3D figūra sukasi scenoje su prožektoriumi, ją galima pasukti pele. Šalia yra OVR, rekordas su karjeros lygiu ir stovėsena.
+- **Kova:**
+  - pasirinkimo sąraše rodomi 3D portretai;
+  - „Tale of the Tape“ lentelėse abu kovotojai stovi vienas prieš kitą;
+  - raundų metu kovotojai stovi apatiniuose kampuose ir kiekvieno smūgio metu puola arba atšoka;
+  - laimėtojas pakelia rankas (pergalės poza).
+- **Telefonas:** įrašų nuotraukose, klientų ir kovotojų paskyrose, pranešimuose apie naujus klientus.
+
+## 4a-3. Telefonas kaip socialinė programėlė (`PhonePanel`)
+- **Stories eilė viršuje:** 4 įrašų tipai burbuluose. Auksinis žiedas reiškia, kad galima skelbti. Pilkas žiedas su laiku reiškia, kad reikia palaukti.
+- **Srautas (FEED):** kiekvienas įrašas yra nuotraukos kortelė su akademijos paskyra ir laiku.
+  - Nuotraukoje yra ringas, prožektorius ir 3D kovotojai. „Sparring“ rodo du kovotojus vienas prieš kitą, „Glow-up“ ir „Highlight“ rodo pergalės pozą.
+  - Po nuotrauka: ♥ skaičius, kuris gyvai auga pirmas minutes po įrašo, 💬 komentarai ir tikras rezultatas („+10 fans“).
+  - Senesni įrašai rodomi kompaktiškai. Nauji klientai rodomi atskira eilute su jų 3D portretu.
+- **Iššokantys pranešimai:** po įrašo iš viršaus nusileidžia seka:
+  - „Posted! +10 followers“;
+  - „🔥 emily.s and 9 others started following you“;
+  - „❤️ … liked your post“;
+  - „💬 komentaras“;
+  - „<vardas> walked in for a free trial!“ su 3D veidu.
+
+  Kol įrašas „karštas“ (4 min.), retkarčiais ateina papildomi like ir komentarai.
+
 ## 4b. Kasdienis prizas, užduotys, lyderių lenta (`RetentionHandler`, `GoalsPanel`)
 - **Prisijungimo serija:** 7 dienos, $100 → $1,000, 7-ą dieną +5 reputacijos. Praleidus dieną serija prasideda iš naujo. Dienos skaičiuojamos pagal UTC.
 - **Kasdienės užduotys:** 3 per dieną. Pirmoji visada įvykdoma naujokui, perprisijungus užduotys nesikeičia. Progresą praneša treniruočių, kovų, įrašų, rėmėjų, turnyrų, padrąsinimo ir skautų handleriai.
@@ -118,7 +159,7 @@ Ikonas iš naujo sugeneruoja `node tools/icons/make_icons.js`; `assets/icons/_pr
 src/
   ReplicatedFirst/LoadingScreen.client.lua
   ReplicatedStorage/Modules/
-    MainHUDController, SoundConfig, Sfx, IconConfig, visi *Config ir DataSchema
+    MainHUDController, SoundConfig, Sfx, IconConfig, FighterAppearance, visi *Config ir DataSchema
     Panels/  PanelKit, ClientState, 7 panelių moduliai
   ServerScriptService/   visi serverio handleriai (*.server.lua)
   StarterPlayer/StarterPlayerScripts/
@@ -164,4 +205,6 @@ python3 fetch_assets.py            # vieną kartą: API dump + šriftai
 ./all.sh loading title flow_play   # krovimas, titulinis, PLAY
 ```
 
-**Ko mock'as negali:** tikrų paspaudimų, 3D vaizdo, našumo telefone. Po įdiegimo Studio paspaudyk viską, ypač telefono režimu (Test → Device).
+**3D peržiūra:** `ViewportFrame` turinys piešiamas supaprastintai (plokšti daugiakampiai), su apytiksliu R15 kūnu. To pakanka pozoms ir kadravimui patikrinti. `fighters_full`, `fighters_turn`, `fighters_portrait` ir `fighters_victory` rodo daug kovotojų šalia vienas kito.
+
+**Ko mock'as negali:** tikrų paspaudimų, tikro Roblox 3D vaizdo, našumo telefone. Po įdiegimo Studio paspaudyk viską, ypač telefono režimu (Test → Device).

@@ -171,22 +171,85 @@ function AcademyPanel.create(Kit, State)
 	})
 	detailEmpty.Position = UDim2.new(0, 0, 0.5, -80)
 
-	-- --- Detalės: antraštės kortelė ---
-	local headerCard = Kit.card({ parent = detailScroll, name = "HeaderCard", size = UDim2.new(1, 0, 0, 104), order = 1 })
-	local _, detailInitials, detailAvatarRing = Kit.avatar({
-		parent = headerCard,
-		text = "?",
-		size = 60,
-		position = UDim2.new(0, 16, 0, 16),
+	-- --- Detalės: antraštės kortelė su 3D scena (kovotojas sukasi, galima pasukti pele) ---
+	local STAGE_W = 132
+	local TEXT_X = STAGE_W + 24
+	local headerCard = Kit.card({ parent = detailScroll, name = "HeaderCard", size = UDim2.new(1, 0, 0, 188), order = 1 })
+	local stage = Kit.create("Frame", {
+		Name = "Stage",
+		BackgroundColor3 = Color3.new(1, 1, 1),
+		Size = UDim2.new(0, STAGE_W, 1, -20),
+		Position = UDim2.new(0, 10, 0, 10),
+		Parent = headerCard,
 	})
+	Kit.corner(stage, 12)
+	local stageStroke = Kit.stroke(stage, C.border, 1, 0.3)
+	Kit.create("UIGradient", { Color = ColorSequence.new(C.bgCardLight, C.bg), Rotation = 90, Parent = stage })
+	local stageSpot = Kit.create("Frame", {
+		Name = "Spotlight",
+		BackgroundColor3 = C.goldBright,
+		AnchorPoint = Vector2.new(0.5, 0),
+		Size = UDim2.new(0.92, 0, 0.8, 0),
+		Position = UDim2.new(0.5, 0, 0, 6),
+		Parent = stage,
+	})
+	Kit.corner(stageSpot, UDim.new(1, 0))
+	Kit.create("UIGradient", {
+		Rotation = 90,
+		Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.8), NumberSequenceKeypoint.new(1, 1) }),
+		Parent = stageSpot,
+	})
+	local stageFloor = Kit.create("Frame", {
+		Name = "Floor",
+		BackgroundColor3 = Color3.new(0, 0, 0),
+		BackgroundTransparency = 0.5,
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Size = UDim2.new(0.78, 0, 0, 14),
+		Position = UDim2.new(0.5, 0, 1, -13),
+		Parent = stage,
+	})
+	Kit.corner(stageFloor, UDim.new(1, 0))
+	local stageFighter = Kit.fighterView({
+		parent = stage,
+		frameName = "Fighter3D",
+		mode = "full",
+		spin = 26,
+		idle = true,
+		draggable = true,
+		corner = UDim.new(0, 12),
+	})
+	local stageInitials = nil
+	if not stageFighter then
+		local _, initials = Kit.avatar({
+			parent = stage,
+			text = "?",
+			size = 64,
+			position = UDim2.new(0.5, 0, 0.5, 0),
+			anchor = Vector2.new(0.5, 0.5),
+		})
+		stageInitials = initials
+	end
+	local dragHint = Kit.label({
+		parent = stage,
+		name = "DragHint",
+		text = "⟲ drag",
+		textSize = 10,
+		color = C.textSecondary,
+		align = Enum.TextXAlignment.Right,
+		size = UDim2.new(0, 60, 0, 12),
+		position = UDim2.new(1, -8, 1, -6),
+		anchor = Vector2.new(1, 1),
+	})
+	dragHint.TextTransparency = 0.3
+	dragHint.Visible = stageFighter ~= nil
 	local detailName = Kit.label({
 		parent = headerCard,
 		name = "Name",
 		text = "",
 		bold = true,
-		textSize = 20,
-		size = UDim2.new(1, -(90 + 100), 0, 24),
-		position = UDim2.new(0, 90, 0, 16),
+		textSize = 19,
+		size = UDim2.new(1, -(TEXT_X + 12), 0, 24),
+		position = UDim2.new(0, TEXT_X, 0, 14),
 	})
 	local detailSub = Kit.label({
 		parent = headerCard,
@@ -194,52 +257,69 @@ function AcademyPanel.create(Kit, State)
 		text = "",
 		textSize = 12,
 		color = C.textSecondary,
-		size = UDim2.new(1, -(90 + 84), 0, 18),
-		position = UDim2.new(0, 90, 0, 42),
+		size = UDim2.new(1, -(TEXT_X + 12), 0, 18),
+		position = UDim2.new(0, TEXT_X, 0, 39),
 	})
 	local badgeRow = Kit.create("Frame", {
 		Name = "Badges",
 		BackgroundTransparency = 1,
-		Size = UDim2.new(1, -106, 0, 22),
-		Position = UDim2.new(0, 90, 0, 68),
+		Size = UDim2.new(1, -(TEXT_X + 12), 0, 22),
+		Position = UDim2.new(0, TEXT_X, 0, 64),
 		Parent = headerCard,
 	})
 	Kit.list(badgeRow, 6, Enum.FillDirection.Horizontal, Enum.HorizontalAlignment.Left, Enum.VerticalAlignment.Center)
-	Kit.label({
-		parent = headerCard,
-		name = "RecordCaption",
-		text = "RECORD",
-		bold = true,
-		textSize = 10,
-		color = C.textSecondary,
-		align = Enum.TextXAlignment.Right,
-		size = UDim2.new(0, 84, 0, 14),
-		position = UDim2.new(1, -16, 0, 16),
-		anchor = Vector2.new(1, 0),
+
+	-- Faktai po vardu: OVR, rekordas (su karjeros lygiu), stovėsena (atitinka 3D pozą)
+	local factRow = Kit.create("Frame", {
+		Name = "Facts",
+		BackgroundTransparency = 1,
+		Size = UDim2.new(1, -(TEXT_X + 12), 0, 76),
+		Position = UDim2.new(0, TEXT_X, 0, 98),
+		Parent = headerCard,
 	})
-	local recordValue = Kit.label({
-		parent = headerCard,
-		name = "Record",
-		text = "0-0-0",
-		bold = true,
-		textSize = 18,
-		color = C.goldBright,
-		align = Enum.TextXAlignment.Right,
-		size = UDim2.new(0, 84, 0, 24),
-		position = UDim2.new(1, -16, 0, 30),
-		anchor = Vector2.new(1, 0),
-	})
-	local tierValue = Kit.label({
-		parent = headerCard,
-		name = "Tier",
-		text = "",
-		textSize = 12,
-		color = C.textSecondary,
-		align = Enum.TextXAlignment.Right,
-		size = UDim2.new(0, 84, 0, 16),
-		position = UDim2.new(1, -16, 0, 56),
-		anchor = Vector2.new(1, 0),
-	})
+	Kit.list(factRow, 6, Enum.FillDirection.Horizontal, Enum.HorizontalAlignment.Left, Enum.VerticalAlignment.Top)
+	local factValues, factCaptions = {}, {}
+	for index, def in ipairs({
+		{ key = "ovr", caption = "OVR", size = 28, font = Enum.Font.GothamBlack },
+		{ key = "record", caption = "RECORD", size = 17, font = Enum.Font.Oswald, color = C.goldBright },
+		{ key = "stance", caption = "STANCE", size = 15, font = Enum.Font.Oswald },
+	}) do
+		local tile = Kit.create("Frame", {
+			Name = "Fact_" .. def.key,
+			BackgroundColor3 = C.bg,
+			BackgroundTransparency = 0.25,
+			Size = UDim2.new(1 / 3, -4, 1, 0),
+			LayoutOrder = index,
+			Parent = factRow,
+		})
+		Kit.corner(tile, 10)
+		Kit.stroke(tile, C.border, 1, 0.5)
+		factValues[def.key] = Kit.label({
+			parent = tile,
+			name = "Value",
+			text = "",
+			font = def.font,
+			textSize = def.size,
+			color = def.color,
+			align = Enum.TextXAlignment.Center,
+			size = UDim2.new(1, -6, 0, 36),
+			position = UDim2.new(0, 3, 0, 10),
+		})
+		factCaptions[def.key] = Kit.label({
+			parent = tile,
+			name = "Caption",
+			text = def.caption,
+			bold = true,
+			textSize = 9,
+			color = C.textSecondary,
+			align = Enum.TextXAlignment.Center,
+			wrap = true, -- "LOCAL AMATEUR" -> two lines
+			size = UDim2.new(1, -4, 0, 22),
+			position = UDim2.new(0, 2, 1, -26),
+		})
+	end
+	local recordValue = factValues.record
+	local tierValue = factCaptions.record
 
 	-- --- Detalės: statistika ---
 	local statsCard = Kit.card({
@@ -712,8 +792,18 @@ function AcademyPanel.create(Kit, State)
 		end
 
 		local potentialColor = Kit.potentialColor(student.potencialas)
-		detailInitials.Text = Kit.initials(student.name)
-		detailAvatarRing.Color = potentialColor
+		if stageFighter then
+			stageFighter.SetFighter(student.name)
+		elseif stageInitials then
+			stageInitials.Text = Kit.initials(student.name)
+		end
+		stageStroke.Color = potentialColor
+		stageSpot.BackgroundColor3 = student.potencialas == "Common" and C.textPrimary or potentialColor
+		local fighters = Kit.fighters()
+		local look = fighters and fighters.look(student.name)
+		factValues.ovr.Text = tostring(Kit.overall(student))
+		factValues.ovr.TextColor3 = student.potencialas == "Common" and C.textPrimary or potentialColor
+		factValues.stance.Text = (look and look.southpaw) and "Southpaw" or "Orthodox"
 		detailName.Text = student.name or "?"
 		detailSub.Text = string.format("%s  •  %s", Kit.translate("personality", student.personality), student.style or "Balanced")
 
@@ -725,8 +815,6 @@ function AcademyPanel.create(Kit, State)
 		Kit.potentialBadge({ parent = badgeRow, potential = student.potencialas, order = 1 })
 		if student.karjerosStadija == "Trial" then
 			Kit.badge({ parent = badgeRow, text = "Trial", color = C.steelBright, order = 2 })
-		else
-			Kit.badge({ parent = badgeRow, text = "Member", color = C.textSecondary, order = 2 })
 		end
 		-- Crimson = tik neigiama busena; paruostas kovoms = auksas
 		if student.injured then
@@ -738,7 +826,7 @@ function AcademyPanel.create(Kit, State)
 		local record = student.record or {}
 		recordValue.Text = string.format("%d-%d-%d", record.wins or 0, record.losses or 0, record.draws or 0)
 		local tier = FightConfig.Ladder[student.careerTier or 1]
-		tierValue.Text = Kit.translate("ladder", tier and tier.name or "-")
+		tierValue.Text = string.upper(Kit.translate("ladder", tier and tier.name or "Record"))
 
 		-- Statistika
 		local stats = student.stats or {}
@@ -879,10 +967,11 @@ function AcademyPanel.create(Kit, State)
 				})
 				Kit.corner(accent, UDim.new(1, 0))
 			end
-			Kit.ovrCard({
+			Kit.fighterCard({
 				parent = row,
 				student = student,
-				position = UDim2.new(0, 12, 0.5, 0),
+				size = 50,
+				position = UDim2.new(0, 10, 0.5, 0),
 				anchor = Vector2.new(0, 0.5),
 			})
 			Kit.label({

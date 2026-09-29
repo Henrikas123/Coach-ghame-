@@ -85,6 +85,12 @@ _G.CoachAcademyPanels = setmetatable({}, {
 	end,
 })
 
+-- 3D kovotoju kunas paruosiamas is anksto (pozos skaiciuojamos viena karta)
+local fighterModule = PanelKit.fighters()
+if fighterModule then
+	fighterModule.warmup()
+end
+
 -- Paneles sukuriamos is anksto (po viena per kadra), kad pirmas atidarymas nestrigtu
 task.delay(2, function()
 	local keys = {}

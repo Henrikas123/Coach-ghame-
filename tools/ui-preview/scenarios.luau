@@ -278,6 +278,40 @@ S.phone_fighters = {
 		api.click("Panel_Phone/TabBar/Tab_fighters")
 	end,
 }
+S.phone_feed = {
+	seed = richSeed,
+	run = function(api)
+		api.open("Phone")
+		api.scroll("Panel_Phone/Page_posts", 120)
+	end,
+}
+S.phone_feed_card = {
+	seed = richSeed,
+	run = function(api)
+		api.open("Phone")
+		api.scroll("Panel_Phone/Page_posts", 300)
+	end,
+}
+-- ka tik paskelbta: telefono pranesimas nusileidzia, naujas irasas su nuotrauka srauto virsuje
+S.phone_notify = {
+	seed = function(profile, now)
+		richSeed(profile, now)
+		profile.reachAccumulated = 150
+	end,
+	settle = 0.3,
+	run = function(api)
+		api.open("Phone")
+		api.click("Panel_Phone/Post_AcademyTour/PostButton")
+		api.wait(0.5)
+		api.scroll("Panel_Phone/Page_posts", 120)
+	end,
+	check = function(api)
+		local banner = api.find("Panel_Phone/Notification")
+		assert(banner.Visible, "phone notification not shown")
+		local text = api.find("Panel_Phone/Notification/Text").Text
+		assert(string.find(text, "Posted", 1, true), "first notification should be the post result: " .. text)
+	end,
+}
 S.phone_fresh = { seed = freshSeed, run = function(api) api.open("Phone") end }
 S.phone_phone = { seed = richSeed, viewport = "phone", run = function(api) api.open("Phone") end }
 S.flow_post = {
@@ -810,5 +844,64 @@ S.flow_career_fight = {
 }
 S.tournament_phone = { seed = richSeed, viewport = "phone", run = function(api) api.open("Tournament") end }
 S.staff_phone = { seed = richSeed, viewport = "phone", run = function(api) api.open("Staff") end }
+
+-- 3D fighters: many names side by side (look variety, pose, framing)
+local function gallery(names, opts)
+	return {
+		seed = richSeed,
+		intro = false,
+		run = function(api)
+			local roblox = require("@lune/roblox")
+			local UDim2, Color3 = roblox.UDim2, roblox.Color3
+			local mock = api.state()
+			local modules = mock.getService("ReplicatedStorage"):FindFirstChild("Modules")
+			api.serverRun(function()
+				local FA = mock.requireFrom(modules:FindFirstChild("FighterAppearance"), "client")
+				local gui = mock.Instance.new("ScreenGui")
+				gui.Name = "Gallery"
+				gui.IgnoreGuiInset = true
+				gui.DisplayOrder = 100
+				local bg = mock.Instance.new("Frame")
+				bg.Name = "Bg"
+				bg.Size = UDim2.fromScale(1, 1)
+				bg.BackgroundColor3 = Color3.fromRGB(28, 26, 30)
+				bg.Parent = gui
+				local columns = opts.columns or 6
+				for index, name in ipairs(names) do
+					local col, row = (index - 1) % columns, (index - 1) // columns
+					local cell = mock.Instance.new("Frame")
+					cell.Name = "Cell" .. index
+					cell.BackgroundColor3 = Color3.fromRGB(44, 40, 46)
+					cell.Size = UDim2.fromOffset(opts.w, opts.h)
+					cell.Position = UDim2.fromOffset(10 + col * (opts.w + 10), 10 + row * (opts.h + 30))
+					cell.Parent = bg
+					FA.viewport({ parent = cell, name = name, mode = opts.mode, yaw = opts.yaw and opts.yaw(index), pose = opts.pose })
+					local caption = mock.Instance.new("TextLabel")
+					caption.BackgroundTransparency = 1
+					caption.Text = name
+					caption.TextColor3 = Color3.new(1, 1, 1)
+					caption.TextSize = 14
+					caption.Size = UDim2.new(1, 0, 0, 20)
+					caption.Position = UDim2.new(0, 0, 1, 4)
+					caption.Parent = cell
+				end
+				gui.Parent = api.player():FindFirstChild("PlayerGui")
+			end, 4)
+		end,
+	}
+end
+local GALLERY_NAMES = {
+	"Alex Martin", "Mantas R.", "Jonas K.", "Tomas B.", "Iron Mike", "Emily S.",
+	"Lukas P.", "Marco D.", "Sam O.", "Rokas V.", "Nina T.", "Dario F.",
+}
+S.fighters_full = gallery(GALLERY_NAMES, { w = 200, h = 300, columns = 6 })
+S.fighters_turn = gallery({ "Alex Martin", "Alex Martin", "Alex Martin", "Alex Martin", "Lukas P.", "Lukas P." }, {
+	w = 200, h = 300, columns = 6,
+	yaw = function(index)
+		return ({ 0, 12, 55, 90, 12, -55 })[index]
+	end,
+})
+S.fighters_portrait = gallery(GALLERY_NAMES, { w = 140, h = 140, columns = 8, mode = "portrait" })
+S.fighters_victory = gallery(GALLERY_NAMES, { w = 200, h = 300, columns = 6, pose = "victory" })
 
 return S

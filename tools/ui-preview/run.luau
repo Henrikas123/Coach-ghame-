@@ -104,7 +104,7 @@ local modulesFolder = make("Folder", "Modules", ReplicatedStorage)
 local MODULES = {
 	"DataSchema", "TrainingConfig", "EquipmentConfig", "MarketingConfig", "FightConfig", "AcademyConfig",
 	"InjuryConfig", "StaffConfig", "ScoutConfig", "SponsorConfig", "TournamentConfig", "MainHUDController",
-	"SoundConfig", "Sfx", "IconConfig", "RetentionConfig", "TutorialConfig",
+	"SoundConfig", "Sfx", "IconConfig", "RetentionConfig", "TutorialConfig", "FighterAppearance",
 }
 for _, name in ipairs(MODULES) do
 	local source = readFirst({
@@ -170,6 +170,7 @@ local SERVER_SCRIPTS = {
 	"DataStoreHandler", "TrainingHandler", "EquipmentHandler", "MarketingHandler", "ReputationHandler",
 	"FightHandler", "AcademyHandler", "StyleHandler", "MoraleHandler", "InjuryHandler", "StaffHandler",
 	"ScoutHandler", "SponsorHandler", "TournamentHandler", "PanelDataHandler", "RetentionHandler", "TutorialHandler",
+	"FighterRigBuilder",
 }
 local serverScripts = {}
 for _, name in ipairs(SERVER_SCRIPTS) do

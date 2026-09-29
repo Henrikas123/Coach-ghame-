@@ -637,6 +637,37 @@ function baseMethods.Destroy(self)
 		signal.handlers = {}
 	end
 end
+-- Clone: deep copy; references inside the copied tree (PrimaryPart, Part0/Part1) point to the copies
+function baseMethods.Clone(self)
+	local map = {}
+	local function copy(inst)
+		local data = internal[inst]
+		local new = M.rawInstance(data.ClassName)
+		local newData = internal[new]
+		newData.Name = data.Name
+		for key, value in pairs(data.props) do
+			newData.props[key] = value
+		end
+		for key, value in pairs(data.attributes) do
+			newData.attributes[key] = value
+		end
+		map[inst] = new
+		for _, child in ipairs(data.children) do
+			setParent(copy(child), new)
+		end
+		return new
+	end
+	local root = copy(self)
+	for _, new in pairs(map) do
+		local props = internal[new].props
+		for key, value in pairs(props) do
+			if isInstance(value) and map[value] then
+				props[key] = map[value]
+			end
+		end
+	end
+	return root
+end
 function baseMethods.GetPropertyChangedSignal(self, prop)
 	local data = internal[self]
 	if prop ~= "Name" and prop ~= "Parent" and not findProp(data.ClassName, prop) then
@@ -1096,6 +1127,98 @@ specialGetters.DataModel = {
 }
 M.getService = getService
 
+classMethods.Model = {
+	GetPivot = function(self)
+		local primary = internal[self].props.PrimaryPart
+		if primary then
+			return primary.CFrame
+		end
+		return internal[self].props.WorldPivot or roblox.CFrame.new()
+	end,
+	PivotTo = function(self, cf)
+		local delta = cf * classMethods.Model.GetPivot(self):Inverse()
+		for _, item in ipairs(self:GetDescendants()) do
+			if item:IsA("BasePart") then
+				item.CFrame = delta * item.CFrame
+			end
+		end
+		if not internal[self].props.PrimaryPart then
+			internal[self].props.WorldPivot = cf
+		end
+	end,
+}
+
+-- A stand-in for Players:CreateHumanoidModelFromDescription: R15 part names, sizes and joints like the
+-- default block body (numbers are approximate; the real rig comes from Roblox)
+function M.buildR15Rig()
+	local CF, V3 = roblox.CFrame, roblox.Vector3
+	local model = M.rawInstance("Model")
+	internal[model].Name = "Rig"
+	local parts = {}
+	local function part(name, className, size, pos)
+		local p = M.rawInstance(className)
+		internal[p].Name = name
+		p.Size = V3.new(size[1], size[2], size[3])
+		p.CFrame = CF.new(pos[1], pos[2], pos[3])
+		p.Color = Color3.fromRGB(163, 162, 165)
+		setParent(p, model)
+		parts[name] = p
+		return p
+	end
+	local function joint(name, part0, part1, point)
+		local j = M.rawInstance("Motor6D")
+		internal[j].Name = name
+		local at = CF.new(point[1], point[2], point[3])
+		j.Part0 = parts[part0]
+		j.Part1 = parts[part1]
+		j.C0 = parts[part0].CFrame:Inverse() * at
+		j.C1 = parts[part1].CFrame:Inverse() * at
+		setParent(j, parts[part1])
+	end
+	local root = part("HumanoidRootPart", "Part", { 2, 2, 1 }, { 0, 0, 0 })
+	root.Transparency = 1
+	part("LowerTorso", "MeshPart", { 2, 0.4, 1 }, { 0, -0.8, 0 })
+	part("UpperTorso", "MeshPart", { 2, 1.6, 1 }, { 0, 0.2, 0 })
+	local head = part("Head", "MeshPart", { 1.2, 1.2, 1.2 }, { 0, 1.62, 0 })
+	local face = M.rawInstance("Decal")
+	internal[face].Name = "face"
+	setParent(face, head)
+	for _, side in ipairs({ { "Left", -1 }, { "Right", 1 } }) do
+		local n, x = side[1], side[2]
+		part(n .. "UpperArm", "MeshPart", { 1, 1.169, 1 }, { 1.5 * x, 0.37, 0 })
+		part(n .. "LowerArm", "MeshPart", { 1, 1.052, 1 }, { 1.5 * x, -0.74, 0 })
+		part(n .. "Hand", "MeshPart", { 1, 0.3, 1 }, { 1.5 * x, -1.42, 0 })
+		part(n .. "UpperLeg", "MeshPart", { 1, 1.217, 1 }, { 0.5 * x, -1.61, 0 })
+		part(n .. "LowerLeg", "MeshPart", { 1, 1.193, 1 }, { 0.5 * x, -2.81, 0 })
+		part(n .. "Foot", "MeshPart", { 1, 0.3, 1 }, { 0.5 * x, -3.56, -0.1 })
+	end
+	joint("Root", "HumanoidRootPart", "LowerTorso", { 0, -0.8, 0 })
+	joint("Waist", "LowerTorso", "UpperTorso", { 0, -0.6, 0 })
+	joint("Neck", "UpperTorso", "Head", { 0, 1.0, 0 })
+	for _, side in ipairs({ { "Left", -1 }, { "Right", 1 } }) do
+		local n, x = side[1], side[2]
+		joint(n .. "Shoulder", "UpperTorso", n .. "UpperArm", { 1.0 * x, 0.76, 0 })
+		joint(n .. "Elbow", n .. "UpperArm", n .. "LowerArm", { 1.5 * x, -0.2, 0 })
+		joint(n .. "Wrist", n .. "LowerArm", n .. "Hand", { 1.5 * x, -1.27, 0 })
+		joint(n .. "Hip", "LowerTorso", n .. "UpperLeg", { 0.5 * x, -1.0, 0 })
+		joint(n .. "Knee", n .. "UpperLeg", n .. "LowerLeg", { 0.5 * x, -2.22, 0 })
+		joint(n .. "Ankle", n .. "LowerLeg", n .. "Foot", { 0.5 * x, -3.41, 0 })
+	end
+	local humanoid = M.rawInstance("Humanoid")
+	internal[humanoid].Name = "Humanoid"
+	setParent(humanoid, model)
+	local description = M.rawInstance("HumanoidDescription")
+	setParent(description, humanoid)
+	local colors = M.rawInstance("BodyColors")
+	internal[colors].Name = "Body Colors"
+	setParent(colors, model)
+	local animate = M.rawInstance("LocalScript")
+	internal[animate].Name = "Animate"
+	setParent(animate, model)
+	model.PrimaryPart = root
+	return model
+end
+
 classMethods.Workspace = {
 	GetServerTimeNow = function()
 		return world.epoch + world.now
@@ -1290,6 +1413,16 @@ classMethods.Players = {
 			return player
 		end
 		return nil
+	end,
+	CreateHumanoidModelFromDescription = function(_, description, rigType)
+		if not isInstance(description) or not isA(internal[description].ClassName, "HumanoidDescription") then
+			error("CreateHumanoidModelFromDescription expects a HumanoidDescription", 2)
+		end
+		task.wait(0.1)
+		if M.rigFails then
+			error("HTTP 500 (mock)")
+		end
+		return M.buildR15Rig()
 	end,
 	GetNameFromUserIdAsync = function(_, userId)
 		task.wait(0.05)
@@ -1579,7 +1712,40 @@ function M.dump(root)
 		for _, child in ipairs(data.children) do
 			table.insert(children, node(child))
 		end
-		return { c = data.ClassName, n = data.Name, p = props, ch = children }
+		local scene = nil
+		if data.ClassName == "ViewportFrame" then
+			scene = { parts = {} }
+			local camera = data.props.CurrentCamera
+			if camera then
+				scene.cam = { cf = { camera.CFrame:GetComponents() }, fov = camera.FieldOfView }
+			end
+			local ambient, lightColor, dir = instance.Ambient, instance.LightColor, instance.LightDirection
+			scene.ambient = { ambient.R, ambient.G, ambient.B }
+			scene.light = { lightColor.R, lightColor.G, lightColor.B }
+			scene.dir = { dir.X, dir.Y, dir.Z }
+			for _, item in ipairs(instance:GetDescendants()) do
+				if item:IsA("BasePart") and item.Transparency < 0.99 then
+					local shape = "Block"
+					if item:FindFirstChildWhichIsA("SpecialMesh") then
+						shape = "Ellipsoid"
+					elseif item.ClassName == "Part" then
+						shape = item.Shape.Name
+					elseif item.Name == "Head" then
+						shape = "Head"
+					end
+					local color, size = item.Color, item.Size
+					table.insert(scene.parts, {
+						n = item.Name,
+						shape = shape,
+						cf = { item.CFrame:GetComponents() },
+						s = { size.X, size.Y, size.Z },
+						c = { color.R, color.G, color.B },
+						face = item.Name == "Head" and item:FindFirstChildWhichIsA("Decal") ~= nil or nil,
+					})
+				end
+			end
+		end
+		return { c = data.ClassName, n = data.Name, p = props, ch = children, scene = scene }
 	end
 	return node(root)
 end

@@ -454,6 +454,128 @@ function PhonePanel.create(Kit, State)
 		end)
 	end
 
+	-- ============================================================
+	-- IŠŠOKANTYS PRANEŠIMAI (kaip tikrame telefone: nusileidžia iš viršaus, po 2,6 s pakyla)
+	-- ============================================================
+	local banner = Kit.create("Frame", {
+		Name = "Notification",
+		BackgroundColor3 = C.bgCardLight,
+		BackgroundTransparency = 0.04,
+		AnchorPoint = Vector2.new(0.5, 0),
+		Size = UDim2.new(1, -20, 0, 56),
+		Position = UDim2.new(0.5, 0, 0, -70),
+		Visible = false,
+		ZIndex = 30,
+		Parent = screen,
+	})
+	Kit.corner(banner, 16)
+	Kit.stroke(banner, C.gold, 1, 0.55)
+	local bannerIcon = Kit.create("Frame", {
+		Name = "Icon",
+		BackgroundColor3 = C.bg,
+		AnchorPoint = Vector2.new(0, 0.5),
+		Size = UDim2.new(0, 36, 0, 36),
+		Position = UDim2.new(0, 10, 0.5, 0),
+		ZIndex = 31,
+		Parent = banner,
+	})
+	Kit.corner(bannerIcon, 10)
+	local bannerGlyph = Kit.label({
+		parent = bannerIcon,
+		name = "Glyph",
+		text = "🔔",
+		textSize = 18,
+		align = Enum.TextXAlignment.Center,
+		size = UDim2.new(1, 0, 1, 0),
+		zIndex = 32,
+	})
+	Kit.label({
+		parent = banner,
+		name = "App",
+		text = "SOCIALGYM  •  now",
+		bold = true,
+		textSize = 10,
+		color = C.textSecondary,
+		size = UDim2.new(1, -64, 0, 12),
+		position = UDim2.new(0, 54, 0, 9),
+		zIndex = 31,
+	})
+	local bannerText = Kit.label({
+		parent = banner,
+		name = "Text",
+		text = "",
+		rich = true,
+		wrap = true,
+		textSize = 12,
+		alignY = Enum.TextYAlignment.Top,
+		size = UDim2.new(1, -64, 0, 30),
+		position = UDim2.new(0, 54, 0, 22),
+		zIndex = 31,
+	})
+	local bannerPortrait = nil
+
+	local FAN_HANDLES = {
+		"emily.s", "jonas.k", "marta.v", "mike_trains", "boxing.daily", "sofia.fit",
+		"tomas.b", "fightfan22", "coach.rico", "nina.t", "ringside.tv", "lukas.p",
+	}
+	local FAN_COMMENTS = {
+		"That jab is crazy 🔥", "Beast mode 💪", "Sign me up!", "Champion in the making 🏆",
+		"Clean footwork!", "Where is this gym?", "Let's gooo 🥊", "Those gloves are fire",
+	}
+	local fanRng = Random.new()
+	local function fan()
+		return FAN_HANDLES[fanRng:NextInteger(1, #FAN_HANDLES)]
+	end
+
+	local notifications = {}
+	local showingNotification = false
+	local function pumpNotifications()
+		if showingNotification then
+			return
+		end
+		showingNotification = true
+		task.spawn(function()
+			while #notifications > 0 and panel.IsOpen do
+				local note = table.remove(notifications, 1)
+				bannerText.Text = note.text
+				bannerGlyph.Text = note.icon or "🔔"
+				if bannerPortrait then
+					bannerPortrait.Instance:Destroy()
+					bannerPortrait = nil
+				end
+				if note.fighter then
+					bannerPortrait = Kit.fighterView({
+						parent = bannerIcon,
+						name = note.fighter,
+						mode = "portrait",
+						corner = UDim.new(0, 10),
+						zIndex = 33,
+					})
+				end
+				bannerGlyph.Visible = bannerPortrait == nil
+				banner.Position = UDim2.new(0.5, 0, 0, -70)
+				banner.Visible = true
+				Kit.tween(banner, 0.35, { Position = UDim2.new(0.5, 0, 0, 36) }, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+				task.wait(2.6)
+				Kit.tween(banner, 0.25, { Position = UDim2.new(0.5, 0, 0, -70) }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+				task.wait(0.35)
+			end
+			banner.Visible = false
+			table.clear(notifications)
+			showingNotification = false
+		end)
+	end
+	local function notifyPhone(note)
+		if not panel.IsOpen then
+			return
+		end
+		if #notifications >= 6 then
+			table.remove(notifications, 1)
+		end
+		table.insert(notifications, note)
+		pumpNotifications()
+	end
+
 	local function makePage(key)
 		local page = Kit.scroll({
 			parent = content,
@@ -478,7 +600,7 @@ function PhonePanel.create(Kit, State)
 	Kit.label({
 		parent = postsPage,
 		name = "ComposeCaption",
-		text = "NEW POST",
+		text = "NEW POST  •  TAP A STORY",
 		bold = true,
 		textSize = 12,
 		color = C.textSecondary,
@@ -486,98 +608,125 @@ function PhonePanel.create(Kit, State)
 		order = 1,
 	})
 
+	-- Įrašų tipai kaip "stories" burbulai: auksinis žiedas = galima skelbti, pilkas su laiku = laukti
+	local STORY_LABELS = {
+		SparringClip = "Sparring",
+		AcademyTour = "Gym tour",
+		TransformationPost = "Glow-up",
+		CompetitionHighlight = "Highlight",
+	}
+	local storyRow = Kit.create("Frame", {
+		Name = "Stories",
+		BackgroundTransparency = 1,
+		Size = UDim2.new(1, 0, 0, 96),
+		LayoutOrder = 2,
+		Parent = postsPage,
+	})
 	local postCards = {}
+	local storyCount = #MarketingConfig.Order
 	for index, itemId in ipairs(MarketingConfig.Order) do
 		local item = MarketingConfig.Items[itemId]
-		local cardFrame, cardStroke = Kit.card({
-			parent = postsPage,
-			name = "Post_" .. itemId,
-			size = UDim2.new(1, 0, 0, 66),
-			order = 1 + index,
-			radius = 14,
-			clip = true,
+		local cell = Kit.create("Frame", {
+			Name = "Post_" .. itemId,
+			BackgroundTransparency = 1,
+			Size = UDim2.new(1 / storyCount, 0, 1, 0),
+			Position = UDim2.new((index - 1) / storyCount, 0, 0, 0),
+			Parent = storyRow,
 		})
-		local iconTile = Kit.create("Frame", {
-			Name = "IconTile",
+		local bubble = Kit.create("TextButton", {
+			Name = "PostButton",
+			AutoButtonColor = false,
+			Text = "",
 			BackgroundColor3 = C.bg,
-			Size = UDim2.new(0, 40, 0, 40),
-			Position = UDim2.new(0, 12, 0.5, 0),
-			AnchorPoint = Vector2.new(0, 0.5),
-			Parent = cardFrame,
+			AnchorPoint = Vector2.new(0.5, 0),
+			Size = UDim2.new(0, 58, 0, 58),
+			Position = UDim2.new(0.5, 0, 0, 4),
+			Parent = cell,
 		})
-		Kit.corner(iconTile, 11)
-		Kit.stroke(iconTile, C.border, 1, 0.3)
+		Kit.corner(bubble, UDim.new(1, 0))
+		local ring = Kit.stroke(bubble, C.gold, 2.5, 0)
+		local bubbleScale = Kit.create("UIScale", { Scale = 1, Parent = bubble })
 		local iconLabel = Kit.label({
-			parent = iconTile,
+			parent = bubble,
 			name = "Icon",
 			text = POST_ICONS[itemId] or "📣",
-			textSize = 19,
+			textSize = 24,
+			align = Enum.TextXAlignment.Center,
+			size = UDim2.new(1, 0, 1, 0),
+		})
+		local cooldownShade = Kit.create("Frame", {
+			Name = "Cooldown",
+			BackgroundColor3 = Color3.new(0, 0, 0),
+			BackgroundTransparency = 0.35,
+			Size = UDim2.new(1, 0, 1, 0),
+			Visible = false,
+			Parent = bubble,
+		})
+		Kit.corner(cooldownShade, UDim.new(1, 0))
+		local cooldownText = Kit.label({
+			parent = cooldownShade,
+			name = "Time",
+			text = "",
+			bold = true,
+			textSize = 12,
 			align = Enum.TextXAlignment.Center,
 			size = UDim2.new(1, 0, 1, 0),
 		})
 		local title = Kit.label({
-			parent = cardFrame,
+			parent = cell,
 			name = "Title",
-			text = item.label,
+			text = STORY_LABELS[itemId] or item.label,
 			bold = true,
-			textSize = 13,
-			size = UDim2.new(1, -150, 0, 16),
-			position = UDim2.new(0, 62, 0, 15),
+			textSize = 11,
+			align = Enum.TextXAlignment.Center,
+			size = UDim2.new(1, -4, 0, 14),
+			position = UDim2.new(0, 2, 0, 66),
 		})
 		Kit.label({
-			parent = cardFrame,
+			parent = cell,
 			name = "Meta",
-			text = string.format("+%d–%d fans · +%d–%d reach", item.followersMin, item.followersMax, item.reachMin, item.reachMax),
-			textSize = 12,
+			text = string.format("+%d–%d fans", item.followersMin, item.followersMax),
+			textSize = 10,
 			color = C.textSecondary,
-			size = UDim2.new(1, -146, 0, 16),
-			position = UDim2.new(0, 62, 0, 34),
+			align = Enum.TextXAlignment.Center,
+			size = UDim2.new(1, -4, 0, 12),
+			position = UDim2.new(0, 2, 0, 81),
 		})
-		local postButton = Kit.button({
-			parent = cardFrame,
-			name = "PostButton",
-			text = "Post",
-			variant = "gold",
-			size = UDim2.new(0, 76, 0, 30),
-			position = UDim2.new(1, -12, 0.5, 0),
-			anchor = Vector2.new(1, 0.5),
-			textSize = 12,
-			radius = 9,
-			onClick = function()
-				State.fire("MarketingPostContent", itemId)
-			end,
-		})
-		local cooldownTrack = Kit.create("Frame", {
-			Name = "CooldownTrack",
-			BackgroundColor3 = C.bgCardLight,
-			Size = UDim2.new(1, -150, 0, 3),
-			Position = UDim2.new(0, 62, 1, -12),
-			Visible = false,
-			Parent = cardFrame,
-		})
-		Kit.corner(cooldownTrack, UDim.new(1, 0))
-		local cooldownFill = Kit.create("Frame", {
-			Name = "Fill",
-			BackgroundColor3 = C.steelBright,
-			Size = UDim2.new(0, 0, 1, 0),
-			Parent = cooldownTrack,
-		})
-		Kit.corner(cooldownFill, UDim.new(1, 0))
-		postCards[itemId] = {
-			icon = iconLabel,
+		local entry = {
 			item = item,
-			stroke = cardStroke,
+			icon = iconLabel,
+			ring = ring,
 			title = title,
-			button = postButton,
-			track = cooldownTrack,
-			fill = cooldownFill,
+			shade = cooldownShade,
+			time = cooldownText,
+			bubble = bubble,
+			ready = false,
 		}
+		bubble.MouseEnter:Connect(function()
+			if entry.ready then
+				Kit.tween(bubbleScale, 0.12, { Scale = 1.08 })
+			end
+		end)
+		bubble.MouseLeave:Connect(function()
+			Kit.tween(bubbleScale, 0.12, { Scale = 1 })
+		end)
+		bubble.Activated:Connect(function()
+			if not entry.ready then
+				Kit.playSfx("Error")
+				return
+			end
+			Kit.playSfx("Click")
+			bubbleScale.Scale = 0.88
+			Kit.tween(bubbleScale, 0.3, { Scale = 1 }, Enum.EasingStyle.Back)
+			State.fire("MarketingPostContent", itemId)
+		end)
+		postCards[itemId] = entry
 	end
 
 	local feedCaption = Kit.label({
 		parent = postsPage,
 		name = "FeedCaption",
-		text = "ACTIVITY",
+		text = "FEED",
 		bold = true,
 		textSize = 12,
 		color = C.textSecondary,
@@ -587,49 +736,516 @@ function PhonePanel.create(Kit, State)
 	feedCaption.Size = UDim2.new(1, 0, 0, 24)
 	feedCaption.TextYAlignment = Enum.TextYAlignment.Bottom
 
-	local feedRows = {}
-
 	local function renderPostTimers()
 		local s = State.get()
 		local now = State.now()
 		local lastPostTimes = s.marketing.lastPostTimes or {}
 		for itemId, entry in pairs(postCards) do
 			local item = entry.item
-			if item.locked then
-				entry.button.SetEnabled(false)
-				entry.button.SetText("Soon")
-				entry.icon.TextTransparency = 0.5
-				entry.track.Visible = false
-				entry.title.TextColor3 = C.textSecondary
-			else
-				entry.title.TextColor3 = C.textPrimary
+			local remaining = 0
+			if not item.locked then
 				local lastPost = lastPostTimes[itemId]
-				local remaining = lastPost and (lastPost + item.cooldown - now) or 0
-				if remaining > 0 then
-					entry.button.SetEnabled(false)
-					entry.button.SetText(Kit.formatDuration(remaining))
-					entry.track.Visible = true
-					entry.fill.Size = UDim2.new(1 - remaining / item.cooldown, 0, 1, 0)
-					entry.stroke.Color = C.border
-				else
-					entry.button.SetEnabled(true)
-					entry.button.SetText("Post")
-					entry.track.Visible = false
-					entry.stroke.Color = C.gold
+				remaining = lastPost and (lastPost + item.cooldown - now) or 0
+			end
+			entry.ready = not item.locked and remaining <= 0
+			entry.ring.Color = entry.ready and C.gold or C.border
+			entry.ring.Transparency = entry.ready and 0 or 0.3
+			entry.icon.TextTransparency = entry.ready and 0 or 0.45
+			entry.title.TextColor3 = entry.ready and C.textPrimary or C.textSecondary
+			entry.shade.Visible = not entry.ready
+			if item.locked then
+				entry.time.Text = "Soon"
+			elseif remaining > 0 then
+				entry.time.Text = Kit.formatDuration(remaining)
+			end
+		end
+	end
+
+	-- ------------------------------------------------------------
+	-- Srautas kaip socialinis tinklas: įrašai = nuotraukų kortelės su 3D kovotojais,
+	-- "like" skaičius gyvai auga pirmas minutes, nauji klientai -- kompaktiškos eilutės.
+	-- Eilutės pernaudojamos (raktas pagal įrašą), todėl 3D vaizdai nekuriami iš naujo.
+	-- ------------------------------------------------------------
+	local PHOTO_POSTS = 6 -- tiek naujausių įrašų rodoma su nuotrauka, senesni -- kompaktiškai
+	local FEED_LIMIT = 12
+	local feedEmpty = nil
+	local feedItems = {} -- key -> { frame, time, likes = { value, label, pop, target }, timeLabel }
+
+	local function hashText(text)
+		local fighters = Kit.fighters()
+		if fighters then
+			return fighters.hash(text)
+		end
+		local h = 0
+		for i = 1, #text do
+			h = (h * 31 + string.byte(text, i)) % 2147483647
+		end
+		return h
+	end
+
+	local function entryKey(entry)
+		return string.format("%s|%s|%s", entry.kind or "post", tostring(entry.itemId or entry.title or ""), tostring(entry.time or 0))
+	end
+
+	-- kovotojai "nuotraukoje": nariai (arba visi), parenkami pastoviai pagal įrašą
+	local function photoFighters(entry)
+		local pool = {}
+		for _, student in ipairs(State.get().students or {}) do
+			if student.karjerosStadija ~= "Trial" then
+				table.insert(pool, student.name)
+			end
+		end
+		if #pool == 0 then
+			for _, student in ipairs(State.get().students or {}) do
+				table.insert(pool, student.name)
+			end
+		end
+		if #pool == 0 then
+			pool = { State.get().academy.academyName or "Coach" }
+		end
+		local seed = hashText(entryKey(entry))
+		local first = pool[seed % #pool + 1]
+		local second = pool[(seed + 1) % #pool + 1]
+		if second == first then
+			second = FightConfig.OpponentNames and FightConfig.OpponentNames[seed % #FightConfig.OpponentNames + 1] or "Sparring Partner"
+		end
+		return first, second
+	end
+
+	local POST_STYLE = {
+		SparringClip = { sticker = "🥊 SPARRING", caption = "Sparring day: %s vs %s 🔥 #boxing #sparring", duo = true },
+		AcademyTour = { sticker = "🏟️ GYM TOUR", caption = "Welcome to the gym! %s is putting in the work 💪 #academy" },
+		TransformationPost = { sticker = "📈 GLOW-UP", caption = "%s's glow-up. Hard work pays off 📈 #transformation", pose = "victory" },
+		CompetitionHighlight = { sticker = "🏆 HIGHLIGHT", caption = "%s under the lights 🏆 #fightnight", pose = "victory" },
+	}
+
+	-- galutinis like skaicius (pagal tikrus sekejus/reach) ir kiek jo jau "surinkta" per laika
+	local function likeTarget(entry)
+		local item = MarketingConfig.Items[entry.itemId or ""]
+		local followers = entry.followers or (item and math.floor((item.followersMin + item.followersMax) / 2)) or 10
+		local reach = entry.reach or (item and math.floor((item.reachMin + item.reachMax) / 2)) or 10
+		return 24 + followers * 6 + reach * 3 + hashText(entryKey(entry)) % 37
+	end
+	local function likesAt(entry, now)
+		local age = math.max(0, now - (entry.time or now))
+		return math.floor(likeTarget(entry) * (1 - math.exp(-age / 50)) + 0.5)
+	end
+
+	local function makePhotoPost(entry, key)
+		local style = POST_STYLE[entry.itemId] or { sticker = "📣 POST", caption = "New post from %s's gym 💪" }
+		local academy = State.get().academy
+		local academyName = academy.academyName or AcademyConfig.DefaultName
+		local card = Kit.card({
+			parent = postsPage,
+			name = "Post",
+			size = UDim2.new(1, 0, 0, 322),
+			radius = 16,
+			clip = true,
+		})
+		-- antraste: akademijos paskyra
+		local logo = Kit.create("Frame", {
+			Name = "Logo",
+			BackgroundColor3 = C.bgCardLight,
+			Size = UDim2.new(0, 28, 0, 28),
+			Position = UDim2.new(0, 10, 0, 8),
+			Parent = card,
+		})
+		Kit.corner(logo, UDim.new(1, 0))
+		Kit.stroke(logo, C.gold, 1.5, 0)
+		Kit.label({
+			parent = logo,
+			name = "Glyph",
+			text = AcademyConfig.Logos[academy.logoIndex or 1] or AcademyConfig.Logos[1],
+			textSize = 14,
+			align = Enum.TextXAlignment.Center,
+			size = UDim2.new(1, 0, 1, 0),
+		})
+		Kit.label({
+			parent = card,
+			name = "Account",
+			text = academyName,
+			bold = true,
+			textSize = 12,
+			size = UDim2.new(1, -90, 0, 15),
+			position = UDim2.new(0, 46, 0, 8),
+		})
+		local timeLabel = Kit.label({
+			parent = card,
+			name = "Time",
+			text = "",
+			textSize = 11,
+			color = C.textSecondary,
+			size = UDim2.new(1, -90, 0, 13),
+			position = UDim2.new(0, 46, 0, 23),
+		})
+		Kit.label({
+			parent = card,
+			name = "More",
+			text = "•••",
+			bold = true,
+			textSize = 12,
+			color = C.textSecondary,
+			align = Enum.TextXAlignment.Right,
+			size = UDim2.new(0, 30, 0, 28),
+			position = UDim2.new(1, -12, 0, 8),
+			anchor = Vector2.new(1, 0),
+		})
+
+		-- "nuotrauka": ringas, prožektorius, kovotojas(-ai)
+		local photo = Kit.create("Frame", {
+			Name = "Photo",
+			BackgroundColor3 = Color3.new(1, 1, 1),
+			Size = UDim2.new(1, 0, 0, 206),
+			Position = UDim2.new(0, 0, 0, 44),
+			ClipsDescendants = true,
+			Parent = card,
+		})
+		Kit.create("UIGradient", { Color = ColorSequence.new(Color3.fromRGB(70, 46, 38), Color3.fromRGB(18, 16, 20)), Rotation = 90, Parent = photo })
+		local spot = Kit.create("Frame", {
+			Name = "Spotlight",
+			BackgroundColor3 = Color3.fromRGB(255, 232, 190),
+			AnchorPoint = Vector2.new(0.5, 0),
+			Size = UDim2.new(0.8, 0, 0.9, 0),
+			Position = UDim2.new(0.5, 0, 0, -10),
+			Parent = photo,
+		})
+		Kit.corner(spot, UDim.new(1, 0))
+		Kit.create("UIGradient", {
+			Rotation = 90,
+			Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.78), NumberSequenceKeypoint.new(1, 1) }),
+			Parent = spot,
+		})
+		for index, rope in ipairs({ { 0.44, C.crimsonBright }, { 0.56, Color3.fromRGB(235, 235, 240) }, { 0.68, C.steelBright } }) do
+			Kit.create("Frame", {
+				Name = "Rope" .. index,
+				BackgroundColor3 = rope[2],
+				BackgroundTransparency = 0.45,
+				BorderSizePixel = 0,
+				Size = UDim2.new(1, 0, 0, 3),
+				Position = UDim2.new(0, 0, rope[1], 0),
+				Parent = photo,
+			})
+		end
+		-- ringo danga: šviesesnė juosta, ant kurios stovi kovotojai
+		local canvas = Kit.create("Frame", {
+			Name = "Canvas",
+			BackgroundColor3 = Color3.new(1, 1, 1),
+			BorderSizePixel = 0,
+			Size = UDim2.new(1, 0, 0.2, 0),
+			Position = UDim2.new(0, 0, 0.8, 0),
+			Parent = photo,
+		})
+		Kit.create("UIGradient", { Color = ColorSequence.new(Color3.fromRGB(96, 84, 88), Color3.fromRGB(46, 40, 46)), Rotation = 90, Parent = canvas })
+		Kit.create("Frame", {
+			Name = "Edge",
+			BackgroundColor3 = Color3.fromRGB(235, 225, 210),
+			BackgroundTransparency = 0.6,
+			BorderSizePixel = 0,
+			Size = UDim2.new(1, 0, 0, 1),
+			Parent = canvas,
+		})
+		local first, second = photoFighters(entry)
+		if style.duo then
+			Kit.fighterView({ parent = photo, frameName = "FighterA", name = first, yaw = 55, size = UDim2.new(0.56, 0, 0.94, 0), position = UDim2.new(0.02, 0, 0.96, 0), anchor = Vector2.new(0, 1) })
+			Kit.fighterView({ parent = photo, frameName = "FighterB", name = second, yaw = -55, size = UDim2.new(0.56, 0, 0.94, 0), position = UDim2.new(0.98, 0, 0.96, 0), anchor = Vector2.new(1, 1) })
+		else
+			Kit.fighterView({ parent = photo, frameName = "FighterA", name = first, pose = style.pose, size = UDim2.new(0.7, 0, 0.94, 0), position = UDim2.new(0.5, 0, 0.96, 0), anchor = Vector2.new(0.5, 1) })
+		end
+		local sticker = Kit.create("Frame", {
+			Name = "Sticker",
+			BackgroundColor3 = C.bg,
+			BackgroundTransparency = 0.2,
+			Size = UDim2.new(0, 0, 0, 22),
+			AutomaticSize = Enum.AutomaticSize.X,
+			Position = UDim2.new(0, 10, 0, 10),
+			Parent = photo,
+		})
+		Kit.corner(sticker, 8)
+		Kit.stroke(sticker, C.gold, 1, 0.4)
+		Kit.padding(sticker, 0, 8, 0, 8)
+		Kit.label({
+			parent = sticker,
+			name = "Text",
+			text = style.sticker,
+			font = Enum.Font.Oswald,
+			textSize = 12,
+			color = C.goldBright,
+			size = UDim2.new(0, 0, 1, 0),
+			autoSize = Enum.AutomaticSize.X,
+		})
+
+		-- veiksmai: ♥ (gyvai auga), 💬, dalintis; desineje -- tikras rezultatas
+		local actions = Kit.create("Frame", {
+			Name = "Actions",
+			BackgroundTransparency = 1,
+			Size = UDim2.new(1, -24, 0, 26),
+			Position = UDim2.new(0, 12, 0, 256),
+			Parent = card,
+		})
+		local heart = Kit.label({
+			parent = actions,
+			name = "Heart",
+			text = "♥",
+			bold = true,
+			textSize = 18,
+			color = C.crimsonBright,
+			align = Enum.TextXAlignment.Center,
+			size = UDim2.new(0, 20, 1, 0),
+		})
+		local heartPop = Kit.create("UIScale", { Scale = 1, Parent = heart })
+		local likesLabel = Kit.label({
+			parent = actions,
+			name = "Likes",
+			text = "0",
+			bold = true,
+			textSize = 13,
+			size = UDim2.new(0, 60, 1, 0),
+			position = UDim2.new(0, 24, 0, 0),
+		})
+		local commentsLabel = Kit.label({
+			parent = actions,
+			name = "Comments",
+			text = "💬 0",
+			textSize = 12,
+			color = C.textSecondary,
+			size = UDim2.new(0, 60, 1, 0),
+			position = UDim2.new(0, 88, 0, 0),
+		})
+		Kit.label({
+			parent = actions,
+			name = "Share",
+			text = "↗",
+			bold = true,
+			textSize = 15,
+			color = C.textSecondary,
+			size = UDim2.new(0, 20, 1, 0),
+			position = UDim2.new(0, 150, 0, 0),
+		})
+		if entry.followers then
+			Kit.badge({
+				parent = actions,
+				name = "Gain",
+				text = string.format("+%d fans", entry.followers),
+				color = C.gold,
+				height = 20,
+				textSize = 11,
+				anchor = Vector2.new(1, 0.5),
+				position = UDim2.new(1, 0, 0.5, 0),
+			})
+		end
+		local caption = string.format(style.caption, first, second)
+		Kit.label({
+			parent = card,
+			name = "Caption",
+			text = string.format("<b>%s</b>  %s", toHandle(academyName), caption),
+			rich = true,
+			textSize = 12,
+			color = C.textPrimary,
+			wrap = true,
+			alignY = Enum.TextYAlignment.Top,
+			size = UDim2.new(1, -24, 0, 32),
+			position = UDim2.new(0, 12, 0, 284),
+		})
+		local counter = Instance.new("NumberValue")
+		counter.Value = 0
+		counter:GetPropertyChangedSignal("Value"):Connect(function()
+			local value = math.floor(counter.Value + 0.5)
+			likesLabel.Text = Kit.formatNumber(value)
+			commentsLabel.Text = "💬 " .. Kit.formatNumber(math.floor(value / 9))
+		end)
+		return {
+			frame = card,
+			entry = entry,
+			timeLabel = timeLabel,
+			counter = counter,
+			heartPop = heartPop,
+			shown = 0,
+		}
+	end
+
+	local function makeWalkInRow(entry)
+		local row = Kit.create("Frame", {
+			Name = "WalkIn",
+			BackgroundColor3 = C.bgCardLight,
+			Size = UDim2.new(1, 0, 0, 58),
+			Parent = postsPage,
+		})
+		Kit.corner(row, 14)
+		Kit.stroke(row, C.gold, 1, 0.45)
+		local student = nil
+		for _, candidate in ipairs(State.get().students or {}) do
+			if candidate.name == entry.title then
+				student = candidate
+			end
+		end
+		Kit.fighterCard({
+			parent = row,
+			student = student or { name = entry.title },
+			size = 42,
+			showOvr = false,
+			position = UDim2.new(0, 8, 0.5, 0),
+			anchor = Vector2.new(0, 0.5),
+		})
+		Kit.label({
+			parent = row,
+			name = "Title",
+			text = "New client: " .. (entry.title or "?"),
+			bold = true,
+			textSize = 12,
+			color = C.goldBright,
+			size = UDim2.new(1, -120, 0, 16),
+			position = UDim2.new(0, 60, 0, 12),
+		})
+		Kit.label({
+			parent = row,
+			name = "Text",
+			text = entry.text or "",
+			textSize = 12,
+			color = C.textSecondary,
+			size = UDim2.new(1, -68, 0, 14),
+			position = UDim2.new(0, 60, 0, 31),
+		})
+		local timeLabel = Kit.label({
+			parent = row,
+			name = "Time",
+			text = "",
+			textSize = 11,
+			color = C.textSecondary,
+			align = Enum.TextXAlignment.Right,
+			size = UDim2.new(0, 60, 0, 14),
+			position = UDim2.new(1, -10, 0, 12),
+			anchor = Vector2.new(1, 0),
+		})
+		return { frame = row, entry = entry, timeLabel = timeLabel }
+	end
+
+	local function makeCompactPost(entry)
+		local row = Kit.create("Frame", {
+			Name = "PostCompact",
+			BackgroundColor3 = C.bg,
+			BackgroundTransparency = 0.35,
+			Size = UDim2.new(1, 0, 0, 50),
+			Parent = postsPage,
+		})
+		Kit.corner(row, 12)
+		Kit.label({
+			parent = row,
+			name = "Icon",
+			text = POST_ICONS[entry.itemId] or "📣",
+			textSize = 16,
+			align = Enum.TextXAlignment.Center,
+			size = UDim2.new(0, 30, 1, 0),
+			position = UDim2.new(0, 6, 0, 0),
+		})
+		Kit.label({
+			parent = row,
+			name = "Title",
+			text = entry.title or "Post",
+			bold = true,
+			textSize = 12,
+			size = UDim2.new(1, -110, 0, 16),
+			position = UDim2.new(0, 40, 0, 9),
+		})
+		Kit.label({
+			parent = row,
+			name = "Text",
+			text = entry.text or "",
+			textSize = 12,
+			color = C.textSecondary,
+			size = UDim2.new(1, -52, 0, 14),
+			position = UDim2.new(0, 40, 0, 27),
+		})
+		local timeLabel = Kit.label({
+			parent = row,
+			name = "Time",
+			text = "",
+			textSize = 12,
+			color = C.textSecondary,
+			align = Enum.TextXAlignment.Right,
+			size = UDim2.new(0, 70, 0, 14),
+			position = UDim2.new(1, -10, 0, 10),
+			anchor = Vector2.new(1, 0),
+		})
+		return { frame = row, entry = entry, timeLabel = timeLabel }
+	end
+
+	-- like skaicius kyla link to, kiek "surinkta" iki dabar; sirdele stukteli
+	local function updateLikes(instant)
+		local now = State.now()
+		for _, item in pairs(feedItems) do
+			if item.counter then
+				local target = likesAt(item.entry, now)
+				if target > item.shown then
+					item.shown = target
+					if instant then
+						item.counter.Value = target
+					else
+						Kit.tween(item.counter, 0.9, { Value = target }, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+						item.heartPop.Scale = 1.35
+						Kit.tween(item.heartPop, 0.3, { Scale = 1 }, Enum.EasingStyle.Back)
+					end
 				end
 			end
 		end
 	end
 
 	local function renderFeed()
-		for _, row in ipairs(feedRows) do
-			row:Destroy()
-		end
-		table.clear(feedRows)
-
 		local feed = State.get().feed or {}
-		if #feed == 0 then
-			local empty = Kit.label({
+		local now = State.now()
+		local wanted = {}
+		local photos = 0
+		for index, entry in ipairs(feed) do
+			if index > FEED_LIMIT then
+				break
+			end
+			local key = entryKey(entry)
+			local item = feedItems[key]
+			if not item then
+				if entry.kind == "walkin" then
+					item = makeWalkInRow(entry)
+				elseif photos < PHOTO_POSTS then
+					item = makePhotoPost(entry, key)
+				else
+					item = makeCompactPost(entry)
+				end
+				feedItems[key] = item
+				item.isNew = true
+				if index == 1 and item.counter and now - (entry.time or now) < 10 and postsPage.AbsoluteSize.Y > 0 then
+					-- ką tik paskelbtas įrašas: nuslenkam iki srauto, kad matytųsi nuotrauka
+					task.defer(function()
+						local target = feedCaption.AbsolutePosition.Y - postsPage.AbsolutePosition.Y + postsPage.CanvasPosition.Y - 6
+						Kit.tween(postsPage, 0.5, { CanvasPosition = Vector2.new(0, math.max(0, target)) }, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+					end)
+				end
+			end
+			if item.counter then
+				photos += 1
+			end
+			item.frame.LayoutOrder = 20 + index
+			item.timeLabel.Text = Kit.formatTimeAgo(now - (entry.time or now))
+			wanted[key] = true
+		end
+		for key, item in pairs(feedItems) do
+			if not wanted[key] then
+				item.frame:Destroy()
+				feedItems[key] = nil
+			end
+		end
+		-- naujai sukurti irasai: senesni is karto su galutiniu skaiciumi, naujausi -- auga akyse
+		for _, item in pairs(feedItems) do
+			if item.isNew and item.counter then
+				local age = now - (item.entry.time or now)
+				if age > 20 then
+					item.shown = likesAt(item.entry, now)
+					item.counter.Value = item.shown
+				end
+			end
+			item.isNew = nil
+		end
+		updateLikes(false)
+
+		if #feed == 0 and not feedEmpty then
+			feedEmpty = Kit.label({
 				parent = postsPage,
 				name = "FeedEmpty",
 				text = "Nothing posted yet. Your first post brings followers — and followers bring clients.",
@@ -640,68 +1256,9 @@ function PhonePanel.create(Kit, State)
 				size = UDim2.new(1, -16, 0, 44),
 				order = 21,
 			})
-			table.insert(feedRows, empty)
-			return
-		end
-
-		local now = State.now()
-		for index, entry in ipairs(feed) do
-			if index > 12 then
-				break
-			end
-			local isWalkIn = entry.kind == "walkin"
-			local row = Kit.create("Frame", {
-				Name = "Feed" .. index,
-				BackgroundColor3 = isWalkIn and C.bgCardLight or C.bg,
-				BackgroundTransparency = isWalkIn and 0 or 0.35,
-				Size = UDim2.new(1, 0, 0, 50),
-				LayoutOrder = 20 + index,
-				Parent = postsPage,
-			})
-			Kit.corner(row, 12)
-			if isWalkIn then
-				Kit.stroke(row, C.gold, 1, 0.45)
-			end
-			Kit.label({
-				parent = row,
-				name = "Icon",
-				text = isWalkIn and "🚶" or (POST_ICONS[entry.itemId] or "📣"),
-				textSize = 16,
-				align = Enum.TextXAlignment.Center,
-				size = UDim2.new(0, 30, 1, 0),
-				position = UDim2.new(0, 6, 0, 0),
-			})
-			Kit.label({
-				parent = row,
-				name = "Title",
-				text = isWalkIn and ("New client: " .. (entry.title or "?")) or (entry.title or "Post"),
-				bold = true,
-				textSize = 12,
-				color = isWalkIn and C.goldBright or C.textPrimary,
-				size = UDim2.new(1, -110, 0, 16),
-				position = UDim2.new(0, 40, 0, 9),
-			})
-			Kit.label({
-				parent = row,
-				name = "Text",
-				text = entry.text or "",
-				textSize = 12,
-				color = C.textSecondary,
-				size = UDim2.new(1, -52, 0, 14),
-				position = UDim2.new(0, 40, 0, 27),
-			})
-			Kit.label({
-				parent = row,
-				name = "Time",
-				text = Kit.formatTimeAgo(now - (entry.time or now)),
-				textSize = 12,
-				color = C.textSecondary,
-				align = Enum.TextXAlignment.Right,
-				size = UDim2.new(0, 70, 0, 14),
-				position = UDim2.new(1, -10, 0, 10),
-				anchor = Vector2.new(1, 0),
-			})
-			table.insert(feedRows, row)
+		elseif #feed > 0 and feedEmpty then
+			feedEmpty:Destroy()
+			feedEmpty = nil
 		end
 	end
 
@@ -790,12 +1347,12 @@ function PhonePanel.create(Kit, State)
 				order = 2 + index,
 				radius = 14,
 			})
-			Kit.avatar({
+			Kit.fighterCard({
 				parent = row,
-				text = student.name,
-				size = 36,
-				position = UDim2.new(0, 12, 0, 12),
-				ringColor = C.steelBright,
+				student = student,
+				size = 40,
+				showOvr = false,
+				position = UDim2.new(0, 10, 0, 10),
 			})
 			Kit.label({
 				parent = row,
@@ -817,7 +1374,7 @@ function PhonePanel.create(Kit, State)
 			})
 			Kit.badge({
 				parent = row,
-				text = good and "Liks" or "Abejoja",
+				text = good and "Staying" or "Unsure",
 				color = good and C.gold or C.crimsonBright,
 				anchor = Vector2.new(1, 0),
 				position = UDim2.new(1, -12, 0, 13),
@@ -905,12 +1462,11 @@ function PhonePanel.create(Kit, State)
 				order = index,
 				radius = 14,
 			})
-			Kit.avatar({
+			Kit.fighterCard({
 				parent = row,
-				text = student.name,
-				size = 42,
-				position = UDim2.new(0, 12, 0, 12),
-				ringColor = Kit.potentialColor(student.potencialas),
+				student = student,
+				size = 44,
+				position = UDim2.new(0, 10, 0, 10),
 			})
 			local nameLabel = Kit.label({
 				parent = row,
@@ -1079,17 +1635,51 @@ function PhonePanel.create(Kit, State)
 		end
 		return text
 	end
+	-- Įrašo rezultatas -> telefono pranešimų seka (paskelbta, nauji sekėjai, like, komentaras, klientas)
 	State.onMessage("marketing", function(message)
-		if panel.IsOpen then
+		if not panel.IsOpen then
+			return
+		end
+		local _, followers, reach = string.match(message, "^(.-) posted! %+(%d+) followers, %+(%d+) reach")
+		if not followers then
 			panel.Toast(friendlyMarketingMessage(message))
+			return
+		end
+		followers = tonumber(followers) or 0
+		notifyPhone({ icon = "📣", text = string.format("<b>Posted!</b>  +%d followers · +%s reach", followers, reach) })
+		if followers > 1 then
+			notifyPhone({ icon = "🔥", text = string.format("<b>%s</b> and %d others started following you", fan(), followers - 1) })
+		elseif followers == 1 then
+			notifyPhone({ icon = "🔥", text = string.format("<b>%s</b> started following you", fan()) })
+		end
+		notifyPhone({ icon = "❤️", text = string.format("<b>%s</b> and %d others liked your post", fan(), fanRng:NextInteger(6, 24)) })
+		notifyPhone({ icon = "💬", text = string.format("<b>%s</b>: “%s”", fan(), FAN_COMMENTS[fanRng:NextInteger(1, #FAN_COMMENTS)]) })
+		for name in string.gmatch(message, "New client walked in: ([^!]+)!") do
+			notifyPhone({ fighter = name, text = string.format("<b>%s</b> walked in for a free trial!", name) })
 		end
 	end)
 
 	panel.Every(1, function()
 		clockLabel.Text = os.date("%H:%M")
 		renderPostTimers()
+		updateLikes(false)
 	end)
-	panel.Every(30, renderFeed)
+	panel.Every(10, renderFeed)
+	-- kol naujausias įrašas "karštas", retkarčiais ateina like / komentaras
+	panel.Every(9, function()
+		local newest = (State.get().feed or {})[1]
+		if not newest or newest.kind ~= "post" or showingNotification or fanRng:NextNumber() > 0.6 then
+			return
+		end
+		if State.now() - (newest.time or 0) > 240 then
+			return
+		end
+		if fanRng:NextNumber() < 0.6 then
+			notifyPhone({ icon = "❤️", text = string.format("<b>%s</b> liked your post", fan()) })
+		else
+			notifyPhone({ icon = "💬", text = string.format("<b>%s</b>: “%s”", fan(), FAN_COMMENTS[fanRng:NextInteger(1, #FAN_COMMENTS)]) })
+		end
+	end)
 
 	panel.OnOpen(function()
 		renderAll()

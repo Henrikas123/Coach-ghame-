@@ -1210,6 +1210,103 @@ function PanelKit.ovrCard(props)
 	return cardFrame
 end
 
+-- 3D kovotojai (FighterAppearance); jei modulio nera -- inicialai
+local fighterAppearance = nil
+function PanelKit.fighters()
+	if fighterAppearance == nil then
+		local modules = ReplicatedStorage:FindFirstChild("Modules")
+		local module = modules and modules:FindFirstChild("FighterAppearance")
+		local ok, result = false, nil
+		if module then
+			ok, result = pcall(require, module)
+		end
+		fighterAppearance = ok and result or false
+	end
+	return fighterAppearance or nil
+end
+
+-- 3D kovotojas ViewportFrame'e (props kaip FighterAppearance.viewport). Grazina handle arba nil.
+function PanelKit.fighterView(props)
+	local module = PanelKit.fighters()
+	if not module then
+		return nil
+	end
+	return module.viewport(props)
+end
+
+-- Kovotojo kortele: retumo fonas, 3D portretas, OVR skaicius kampe (kaip kolekcineje korteleje)
+function PanelKit.fighterCard(props)
+	local student = props.student or {}
+	local tone = CARD_TONES[student.potencialas] or CARD_TONES.Common
+	local width = props.size or 52
+	local height = props.height or width
+	local radius = props.radius or 11
+	local cardFrame = create("Frame", {
+		Name = props.name or "FighterCard",
+		BackgroundColor3 = Color3.new(1, 1, 1),
+		Size = UDim2.new(0, width, 0, height),
+		Position = props.position or UDim2.new(),
+		AnchorPoint = props.anchor or Vector2.new(0, 0),
+		LayoutOrder = props.order or 0,
+		ZIndex = props.zIndex or 1,
+		Parent = props.parent,
+	})
+	corner(cardFrame, radius)
+	stroke(cardFrame, tone.stroke, 1.5, 0.1)
+	create("UIGradient", {
+		Color = ColorSequence.new(tone.top, tone.bottom),
+		Rotation = 90,
+		Parent = cardFrame,
+	})
+	local handle = PanelKit.fighterView({
+		parent = cardFrame,
+		name = student.name,
+		mode = "portrait",
+		pose = props.pose,
+		corner = UDim.new(0, radius),
+		zIndex = cardFrame.ZIndex,
+	})
+	if not handle then
+		label({
+			parent = cardFrame,
+			name = "Initials",
+			text = PanelKit.initials(student.name),
+			font = Enum.Font.GothamBlack,
+			textSize = math.floor(width * 0.36),
+			color = tone.text,
+			align = Enum.TextXAlignment.Center,
+			size = UDim2.new(1, 0, 1, 0),
+			zIndex = cardFrame.ZIndex,
+		})
+	end
+	if props.showOvr ~= false then
+		local pill = create("Frame", {
+			Name = "Ovr",
+			BackgroundColor3 = C.bg,
+			BackgroundTransparency = 0.1,
+			AnchorPoint = Vector2.new(0, 1),
+			Size = UDim2.new(0, 24, 0, 15),
+			Position = UDim2.new(0, 2, 1, -2),
+			ZIndex = cardFrame.ZIndex + 1,
+			Parent = cardFrame,
+		})
+		corner(pill, 6)
+		stroke(pill, tone.stroke, 1, 0.25)
+		label({
+			parent = pill,
+			name = "Value",
+			text = tostring(PanelKit.overall(student)),
+			font = Enum.Font.GothamBlack,
+			textSize = 10,
+			color = student.potencialas == "Common" and C.textPrimary or tone.stroke,
+			align = Enum.TextXAlignment.Center,
+			size = UDim2.new(1, 0, 1, 0),
+			zIndex = cardFrame.ZIndex + 1,
+		})
+	end
+	return cardFrame, handle
+end
+
 -- Small typography fixes for server messages before they are shown in a toast
 local MESSAGE_FIXES = {
 	{ " %-%- ", " — " },

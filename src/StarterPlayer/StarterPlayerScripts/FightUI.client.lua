@@ -154,7 +154,7 @@ local function renderPicker()
 			shown += 1
 			local ready, reason = fighterStatus(student)
 			local row = Kit.card({ parent = pickerList, name = "Fighter_" .. index, size = UDim2.new(1, 0, 0, 70), order = index, strokeColor = ready and C.gold or C.border, strokeTransparency = ready and 0.35 or 0.5 })
-			Kit.ovrCard({ parent = row, student = student, position = UDim2.new(0, 12, 0.5, 0), anchor = Vector2.new(0, 0.5) })
+			Kit.fighterCard({ parent = row, student = student, size = 52, position = UDim2.new(0, 10, 0.5, 0), anchor = Vector2.new(0, 0.5) })
 			Kit.label({ parent = row, name = "Name", text = student.name or "?", bold = true, textSize = 15, size = UDim2.new(1, -250, 0, 20), position = UDim2.new(0, 68, 0, 14) })
 			local record = student.record or {}
 			Kit.label({
@@ -255,33 +255,101 @@ Kit.stroke(puck, Color3.new(0, 0, 0), 2, 0.2)
 Kit.label({ parent = puck, name = "Glove", text = "🥊", textSize = 15, align = Enum.TextXAlignment.Center, size = UDim2.fromScale(1, 1), zIndex = 9 })
 
 -- tale of the tape intro plates
-local intro = Kit.create("Frame", { Name = "Intro", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.52), Size = UDim2.new(0, 1000, 0, 300), BackgroundTransparency = 1, Visible = false, ZIndex = 8, Parent = broadcast })
+local intro = Kit.create("Frame", { Name = "Intro", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.54), Size = UDim2.new(0, 1060, 0, 300), BackgroundTransparency = 1, Visible = false, ZIndex = 8, Parent = broadcast })
 local introScale = Kit.create("UIScale", { Scale = 1, Parent = intro })
+local PLATE_FIGHTER = 180 -- width of the 3D fighter on the outer side of each plate
 local function plate(isLeft)
-	local frame = Kit.create("Frame", { Name = isLeft and "PlateLeft" or "PlateRight", AnchorPoint = Vector2.new(isLeft and 1 or 0, 0.5), Position = UDim2.new(0.5, isLeft and -50 or 50, 0.5, 0), Size = UDim2.new(0, 400, 0, 250), BackgroundColor3 = Color3.new(1, 1, 1), ZIndex = 8, Parent = intro })
+	local frame = Kit.create("Frame", { Name = isLeft and "PlateLeft" or "PlateRight", AnchorPoint = Vector2.new(isLeft and 1 or 0, 0.5), Position = UDim2.new(0.5, isLeft and -50 or 50, 0.5, 0), Size = UDim2.new(0, 480, 0, 250), BackgroundColor3 = Color3.new(1, 1, 1), ZIndex = 8, Parent = intro })
 	Kit.corner(frame, 16)
 	Kit.stroke(frame, isLeft and C.gold or C.crimsonBright, 2, 0.1)
 	Kit.create("UIGradient", { Color = ColorSequence.new(C.bgCardLight, C.bg), Rotation = 90, Parent = frame })
 	local accent = isLeft and C.goldBright or C.crimsonBright
 	local align = isLeft and Enum.TextXAlignment.Left or Enum.TextXAlignment.Right
-	local corner = Kit.label({ parent = frame, name = "Corner", text = isLeft and "RED CORNER  •  YOUR FIGHTER" or "BLUE CORNER  •  OPPONENT", font = Enum.Font.Oswald, textSize = 15, color = accent, align = align, size = UDim2.new(1, -36, 0, 18), position = UDim2.new(0, 18, 0, 16), zIndex = 9 })
-	local name = Kit.label({ parent = frame, name = "Name", text = "", font = Enum.Font.GothamBlack, textSize = 30, align = align, size = UDim2.new(1, -36, 0, 36), position = UDim2.new(0, 18, 0, 38), zIndex = 9 })
-	local info = Kit.label({ parent = frame, name = "Info", text = "", textSize = 13, color = C.textSecondary, align = align, size = UDim2.new(1, -36, 0, 16), position = UDim2.new(0, 18, 0, 76), zIndex = 9 })
+	-- corner-colored light behind the fighter, fading toward the stats
+	local glow = Kit.create("Frame", { Name = "Glow", BackgroundColor3 = accent, Size = UDim2.new(0, PLATE_FIGHTER + 20, 1, 0), Position = isLeft and UDim2.new(0, 0, 0, 0) or UDim2.new(1, -(PLATE_FIGHTER + 20), 0, 0), ZIndex = 8, Parent = frame })
+	Kit.corner(glow, 16)
+	Kit.create("UIGradient", { Rotation = isLeft and 0 or 180, Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.72), NumberSequenceKeypoint.new(1, 1) }), Parent = glow })
+	-- the fighter stands on the plate's bottom edge and breaks out over its top
+	local fighter = Kit.fighterView({
+		parent = frame,
+		frameName = "Fighter3D",
+		mode = "full",
+		yaw = isLeft and 50 or -50,
+		size = UDim2.new(0, PLATE_FIGHTER, 0, 300),
+		position = isLeft and UDim2.new(0, 6, 1, -4) or UDim2.new(1, -6, 1, -4),
+		anchor = isLeft and Vector2.new(0, 1) or Vector2.new(1, 1),
+		zIndex = 9,
+	})
+	local inset = fighter and PLATE_FIGHTER + 10 or 0
+	local textX = isLeft and 18 + inset or 18
+	local corner = Kit.label({ parent = frame, name = "Corner", text = isLeft and "RED CORNER  •  YOUR FIGHTER" or "BLUE CORNER  •  OPPONENT", font = Enum.Font.Oswald, textSize = 15, color = accent, align = align, size = UDim2.new(1, -(36 + inset), 0, 18), position = UDim2.new(0, textX, 0, 16), zIndex = 9 })
+	local name = Kit.label({ parent = frame, name = "Name", text = "", font = Enum.Font.GothamBlack, textSize = 28, align = align, size = UDim2.new(1, -(36 + inset), 0, 36), position = UDim2.new(0, textX, 0, 38), zIndex = 9 })
+	name.TextTruncate = Enum.TextTruncate.AtEnd
+	local info = Kit.label({ parent = frame, name = "Info", text = "", textSize = 13, color = C.textSecondary, align = align, size = UDim2.new(1, -(36 + inset), 0, 16), position = UDim2.new(0, textX, 0, 76), zIndex = 9 })
 	local rows = {}
 	for i, statId in ipairs({ "power", "speed", "defense", "stamina", "technique" }) do
 		local y = 104 + (i - 1) * 26
-		Kit.label({ parent = frame, name = "Stat_" .. statId, text = STAT_LABELS[statId], font = Enum.Font.Oswald, textSize = 13, color = C.textSecondary, align = align, size = UDim2.new(0, 90, 0, 18), position = isLeft and UDim2.new(0, 18, 0, y) or UDim2.new(1, -108, 0, y), zIndex = 9 })
-		local track = Kit.create("Frame", { Name = "Track_" .. statId, BackgroundColor3 = C.bg, Size = UDim2.new(1, -170, 0, 8), Position = isLeft and UDim2.new(0, 112, 0, y + 5) or UDim2.new(0, 58, 0, y + 5), ZIndex = 9, Parent = frame })
+		Kit.label({ parent = frame, name = "Stat_" .. statId, text = STAT_LABELS[statId], font = Enum.Font.Oswald, textSize = 13, color = C.textSecondary, align = align, size = UDim2.new(0, 90, 0, 18), position = isLeft and UDim2.new(0, 18 + inset, 0, y) or UDim2.new(1, -(108 + inset), 0, y), zIndex = 9 })
+		local track = Kit.create("Frame", { Name = "Track_" .. statId, BackgroundColor3 = C.bg, Size = UDim2.new(1, -(170 + inset), 0, 8), Position = isLeft and UDim2.new(0, 112 + inset, 0, y + 5) or UDim2.new(0, 58, 0, y + 5), ZIndex = 9, Parent = frame })
 		Kit.corner(track, UDim.new(1, 0))
 		local fill = Kit.create("Frame", { Name = "Fill", BackgroundColor3 = accent, Size = UDim2.new(0, 0, 1, 0), AnchorPoint = Vector2.new(isLeft and 0 or 1, 0), Position = UDim2.new(isLeft and 0 or 1, 0, 0, 0), ZIndex = 10, Parent = track })
 		Kit.corner(fill, UDim.new(1, 0))
 		local value = Kit.label({ parent = frame, name = "Value_" .. statId, text = "", bold = true, textSize = 13, align = isLeft and Enum.TextXAlignment.Right or Enum.TextXAlignment.Left, size = UDim2.new(0, 40, 0, 18), position = isLeft and UDim2.new(1, -58, 0, y) or UDim2.new(0, 18, 0, y), zIndex = 9 })
 		rows[statId] = { fill = fill, value = value }
 	end
-	return { frame = frame, name = name, info = info, rows = rows, corner = corner }
+	return { frame = frame, name = name, info = info, rows = rows, corner = corner, fighter = fighter }
 end
 local plateLeft = plate(true)
 local plateRight = plate(false)
+
+-- fighters in the bottom corners during the rounds (lunge on every swing, winner celebrates)
+local function sideFighter(isLeft)
+	local handle = Kit.fighterView({
+		parent = broadcast,
+		frameName = isLeft and "FighterLeft" or "FighterRight",
+		mode = "full",
+		yaw = isLeft and 55 or -55,
+		size = UDim2.new(0, 230, 0, 300),
+		position = isLeft and UDim2.new(0, 18, 0.915, -8) or UDim2.new(1, -18, 0.915, -8),
+		anchor = isLeft and Vector2.new(0, 1) or Vector2.new(1, 1),
+		zIndex = 4,
+	})
+	if not handle then
+		return nil
+	end
+	handle.Instance.Visible = false
+	handle.home = handle.Instance.Position
+	handle.isLeft = isLeft
+	return handle
+end
+local sideLeft = sideFighter(true)
+local sideRight = sideFighter(false)
+
+local function showSideFighters(visible)
+	for _, side in ipairs({ sideLeft, sideRight }) do
+		if side then
+			side.Instance.Visible = visible
+			side.Instance.Position = side.home
+			side.Instance.Rotation = 0
+		end
+	end
+end
+
+local function strike(studentAttacks)
+	local attacker = studentAttacks and sideLeft or sideRight
+	local defender = studentAttacks and sideRight or sideLeft
+	if not attacker or not defender or not attacker.Instance.Visible then
+		return
+	end
+	local dir = studentAttacks and 1 or -1
+	local a, d = attacker.home, defender.home
+	tween(attacker.Instance, 0.1, { Position = UDim2.new(a.X.Scale, a.X.Offset + 38 * dir, a.Y.Scale, a.Y.Offset) }, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+	tween(defender.Instance, 0.12, { Position = UDim2.new(d.X.Scale, d.X.Offset + 16 * dir, d.Y.Scale, d.Y.Offset), Rotation = 4 * dir }, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+	task.delay(0.14, function()
+		tween(attacker.Instance, 0.25, { Position = a })
+		tween(defender.Instance, 0.3, { Position = d, Rotation = 0 })
+	end)
+end
 Kit.label({ parent = intro, name = "VS", text = "VS", font = Enum.Font.Oswald, textSize = 64, color = C.textPrimary, align = Enum.TextXAlignment.Center, size = UDim2.new(0, 100, 0, 70), position = UDim2.new(0.5, 0, 0.5, 0), anchor = Vector2.new(0.5, 0.5), zIndex = 9 })
 local styleNoteLabel = Kit.label({ parent = intro, name = "StyleNote", text = "", bold = true, textSize = 15, color = C.goldBright, align = Enum.TextXAlignment.Center, size = UDim2.new(1, 0, 0, 20), position = UDim2.new(0, 0, 1, 12), zIndex = 9 })
 
@@ -392,6 +460,11 @@ local function applyScales()
 	cornerScale.Scale = s
 	resultScale.Scale = s
 	pickerScale.Scale = s
+	for _, side in ipairs({ sideLeft, sideRight }) do
+		if side then
+			side.Instance.Size = UDim2.new(0, math.floor(230 * s), 0, math.floor(300 * s))
+		end
+	end
 end
 
 local function slam(text, color, hold)
@@ -452,6 +525,7 @@ local function endBroadcast()
 	resultCard.Visible = false
 	cornerCard.Visible = false
 	cornerOpen = false
+	showSideFighters(false)
 	setGameUiHidden(false)
 	fight = nil
 end
@@ -483,6 +557,22 @@ function handlers.start(data)
 	-- tale of the tape
 	plateLeft.name.Text = data.studentName or "?"
 	plateRight.name.Text = data.opponentName or "?"
+	for _, pair in ipairs({
+		{ plateLeft.fighter, data.studentName },
+		{ plateRight.fighter, data.opponentName },
+		{ sideLeft, data.studentName },
+		{ sideRight, data.opponentName },
+	}) do
+		if pair[1] then
+			pair[1].SetFighter(pair[2] or "?", "guard")
+		end
+	end
+	for _, side in ipairs({ sideLeft, sideRight }) do
+		if side then
+			side.SetYaw(side.isLeft and 55 or -55)
+		end
+	end
+	showSideFighters(false)
 	local record = data.studentRecord or {}
 	plateLeft.info.Text = string.format("OVR %d  •  %s  •  %d-%d", average(data.studentStats), data.studentStyle or "Balanced", record.wins or 0, record.losses or 0)
 	plateRight.info.Text = string.format("OVR %d  •  %s", average(data.opponentStats), data.opponentStyle or "Balanced")
@@ -515,6 +605,7 @@ function handlers.round(data)
 	end
 	intro.Visible = false
 	cornerCard.Visible = false
+	showSideFighters(true)
 	roundLabel.Text = string.format("ROUND %d/%d", data.round, data.totalRounds or fight.totalRounds)
 	Kit.playSfx("Bell")
 	slam("ROUND " .. tostring(data.round), C.textPrimary, 0.45)
@@ -538,6 +629,7 @@ function handlers.round(data)
 		local name = studentSwing and fight.studentName or fight.opponentName
 		ticker.Text = string.format(lines[rng:NextInteger(1, #lines)], name or "?")
 		setMomentum(position, 0.35)
+		strike(studentSwing)
 		if rng:NextNumber() < 0.5 then
 			Kit.playSfx("Punch")
 		end
@@ -597,6 +689,13 @@ function handlers.result(data)
 	resultPromo.Visible = data.promoted == true
 	resultText.Text = Kit.localizeMessage(data.message or "")
 	resultCard.Visible = true
+	-- the winner raises both gloves in their corner
+	showSideFighters(true)
+	local winnerSide = won and sideLeft or sideRight
+	if winnerSide then
+		winnerSide.SetYaw(winnerSide.isLeft and 20 or -20) -- turn toward the crowd
+		winnerSide.SetFighter(won and fight.studentName or fight.opponentName, "victory")
+	end
 	ticker.Text = won and "What a performance! The crowd is on its feet." or "Tough night. Back to the gym, coach."
 	resultScale.Scale = viewportScale() * 0.85
 	tween(resultScale, 0.35, { Scale = viewportScale() }, Enum.EasingStyle.Back)

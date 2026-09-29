@@ -53,7 +53,7 @@ TutorialConfig.Steps = {
 		event = "post",
 		count = 1,
 		title = "Grow your gym",
-		text = "Open your phone and post on SocialGym — followers bring new fighters.",
+		text = "Open your phone and tap a gold story to post on SocialGym — followers bring new fighters.",
 		highlight = "PhoneFab",
 	},
 	{
