@@ -3,7 +3,7 @@
 	Coach Academy main HUD in the "fight night" identity:
 	  * StatusPanel: a championship-belt plate -- tier gem medallion (Bronze/Silver/Gold/
 	    Sapphire/Ruby by reputation stars), animated money counter with +$/-$ pop-ups, tier name.
-	  * NavDock: the ring apron -- red corner and blue corner posts with three ropes over the
+	  * NavDock: the ring apron -- red corner and blue corner posts with three ropes inside the
 	    dock; buttons show a tier accent and light up while their panel is open.
 	  * PhoneFab: gold phone button with a "post ready" badge.
 	Buttons call _G.CoachAcademyPanels[key]() (registered by PanelsBootstrap).
@@ -366,42 +366,38 @@ local function createNavButton(parent, item, order)
 	end
 end
 
+-- Dock geometry: the ropes and corner posts live INSIDE the dark dock (never floating over the world)
+local BUTTON_W, BUTTON_H, BUTTON_GAP = 98, 52, 8
+local DOCK_SIDE = 30 -- room for the corner posts
+local DOCK_H = 80
+local DOCK_W = #NAV_ITEMS * BUTTON_W + (#NAV_ITEMS - 1) * BUTTON_GAP + DOCK_SIDE * 2
+
 local function buildNavDock(screenGui)
 	local dock = new("Frame", {
 		Name = "NavDock",
 		AnchorPoint = Vector2.new(0.5, 1),
 		Position = UDim2.new(0.5, 0, 1, -16),
-		Size = UDim2.new(0, 0, 0, 64),
-		AutomaticSize = Enum.AutomaticSize.X,
+		Size = UDim2.new(0, DOCK_W, 0, DOCK_H),
 		BorderSizePixel = 0,
 		ZIndex = 3,
 	}, screenGui)
 	corner(dock, 14)
 	stroke(dock, COLORS.border, 1, 0.25)
-	gradient(dock, Color3.fromRGB(46, 40, 48), Color3.fromRGB(22, 19, 24))
+	gradient(dock, Color3.fromRGB(46, 40, 48), Color3.fromRGB(20, 17, 22))
 	addShadow(dock, 0.55, 5, UDim.new(0, 14))
+	-- narrow screens: shrink the whole dock instead of letting it run off screen
+	local dockScale = new("UIScale", { Scale = 1 }, dock)
+	local camera = game:GetService("Workspace").CurrentCamera
+	local function fit()
+		local width = camera and camera.ViewportSize.X or 0
+		dockScale.Scale = width > 0 and math.min(1, (width - 24) / DOCK_W) or 1
+	end
+	if camera then
+		camera:GetPropertyChangedSignal("ViewportSize"):Connect(fit)
+	end
+	fit()
 
-	new("UIListLayout", {
-		FillDirection = Enum.FillDirection.Horizontal,
-		SortOrder = Enum.SortOrder.LayoutOrder,
-		VerticalAlignment = Enum.VerticalAlignment.Center,
-		HorizontalAlignment = Enum.HorizontalAlignment.Center,
-		Padding = UDim.new(0, 8),
-	}, dock)
-	new("UIPadding", { PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8) }, dock)
-
-	-- Ring: corner posts at both ends and three ropes over the dock (not part of the list layout)
-	local ring = new("Frame", {
-		Name = "Ring",
-		AnchorPoint = Vector2.new(0.5, 1),
-		Position = UDim2.new(0.5, 0, 1, -16),
-		Size = UDim2.new(0, #NAV_ITEMS * 98 + (#NAV_ITEMS - 1) * 8 + 16 + 36, 0, 86),
-		BackgroundTransparency = 1,
-		ZIndex = 2,
-	}, screenGui)
-	dock:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-		ring.Size = UDim2.new(0, dock.AbsoluteSize.X + 36, 0, 86)
-	end)
+	-- three ropes across the top of the dock (red / white / blue)
 	for index, def in ipairs({
 		{ color = COLORS.crimsonBright, dark = COLORS.crimson },
 		{ color = COLORS.textPrimary, dark = Color3.fromRGB(150, 144, 136) },
@@ -409,48 +405,53 @@ local function buildNavDock(screenGui)
 	}) do
 		local rope = new("Frame", {
 			Name = "Rope" .. index,
-			Position = UDim2.new(0, 10, 0, 2 + (index - 1) * 7),
-			Size = UDim2.new(1, -20, 0, 3),
+			Position = UDim2.new(0, DOCK_SIDE - 14, 0, 6 + (index - 1) * 5),
+			Size = UDim2.new(1, -(DOCK_SIDE - 14) * 2, 0, 3),
 			BorderSizePixel = 0,
-			ZIndex = 2,
-		}, ring)
+			ZIndex = 4,
+		}, dock)
 		corner(rope, UDim.new(1, 0))
 		gradient(rope, def.color, def.dark)
 	end
+
+	-- red corner (left) and blue corner (right) posts
 	for _, def in ipairs({
-		{ name = "RedCorner", x = 0, anchor = 0, light = COLORS.crimsonBright, dark = COLORS.crimson },
-		{ name = "BlueCorner", x = 1, anchor = 1, light = COLORS.steelBright, dark = COLORS.steel },
+		{ name = "RedCorner", x = 0, offset = 8, anchor = 0, light = COLORS.crimsonBright, dark = COLORS.crimson },
+		{ name = "BlueCorner", x = 1, offset = -8, anchor = 1, light = COLORS.steelBright, dark = COLORS.steel },
 	}) do
 		local post = new("Frame", {
 			Name = def.name,
-			AnchorPoint = Vector2.new(def.anchor, 1),
-			Position = UDim2.new(def.x, 0, 1, 0),
-			Size = UDim2.new(0, 14, 1, 0),
+			AnchorPoint = Vector2.new(def.anchor, 0.5),
+			Position = UDim2.new(def.x, def.offset, 0.5, 0),
+			Size = UDim2.new(0, 12, 1, -12),
 			BorderSizePixel = 0,
 			ZIndex = 5,
-		}, ring)
-		corner(post, 7)
-		stroke(post, COLORS.shadow, 1, 0.6)
+		}, dock)
+		corner(post, 6)
 		gradient(post, def.light, def.dark, 0)
-		-- turnbuckle pads where the ropes attach
-		for i = 0, 2 do
-			new("Frame", {
-				Name = "Pad",
-				AnchorPoint = Vector2.new(0.5, 0),
-				Position = UDim2.new(0.5, 0, 0, 1 + i * 7),
-				Size = UDim2.new(1, 4, 0, 5),
-				BackgroundColor3 = COLORS.bgCard,
-				BorderSizePixel = 0,
-				ZIndex = 6,
-			}, post)
-		end
 	end
+
+	local row = new("Frame", {
+		Name = "Buttons",
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.new(0.5, 0, 1, -6),
+		Size = UDim2.new(1, -DOCK_SIDE * 2, 0, BUTTON_H),
+		BackgroundTransparency = 1,
+		ZIndex = 4,
+	}, dock)
+	new("UIListLayout", {
+		FillDirection = Enum.FillDirection.Horizontal,
+		SortOrder = Enum.SortOrder.LayoutOrder,
+		VerticalAlignment = Enum.VerticalAlignment.Center,
+		HorizontalAlignment = Enum.HorizontalAlignment.Center,
+		Padding = UDim.new(0, BUTTON_GAP),
+	}, row)
 
 	local buttons, setters = {}, {}
 	for index, item in ipairs(NAV_ITEMS) do
-		buttons[item.key], setters[item.key] = createNavButton(dock, item, index)
+		buttons[item.key], setters[item.key] = createNavButton(row, item, index)
 	end
-	return dock, buttons, setters, ring
+	return dock, buttons, setters
 end
 
 -- ============================================================

@@ -517,6 +517,8 @@ S.flow_play = {
 		assert(playerGui:FindFirstChild("CoachLoadingScreen") == nil, "loading screen still exists")
 		assert(api.find("MainHUD_Premium").Enabled == true, "HUD not re-enabled")
 		assert(playerGui.Parent:GetAttribute("CoachIntro") == "playing", "intro state not playing")
+		local camera = api.state().getService("Workspace").CurrentCamera
+		assert(camera.CameraType.Name == "Custom", "camera not back to Custom: " .. tostring(camera.CameraType))
 	end,
 }
 S.tournament_tape = {

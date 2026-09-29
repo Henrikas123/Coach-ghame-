@@ -633,13 +633,26 @@ local function startGame()
 	creditRow.Visible = false
 
 	orbit:Disconnect()
-	camera.CameraType = savedCamera.type == Enum.CameraType.Scriptable and Enum.CameraType.Custom or savedCamera.type
-	camera.FieldOfView = savedCamera.fov
-	local character = player.Character
-	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-	if humanoid then
-		camera.CameraSubject = humanoid
+	-- Always back to the normal follow camera. (The type read at startup can still be "Fixed"
+	-- because Roblox's camera script had not initialised yet -- restoring that froze the view.)
+	local function restoreCamera()
+		local current = Workspace.CurrentCamera or camera
+		current.CameraType = Enum.CameraType.Custom
+		current.FieldOfView = (savedCamera.fov >= 40 and savedCamera.fov <= 120) and savedCamera.fov or 70
+		local character = player.Character
+		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+		if humanoid then
+			current.CameraSubject = humanoid
+		end
 	end
+	restoreCamera()
+	-- safety net: if anything left the camera scripted/fixed, fix it once more a moment later
+	task.delay(1, function()
+		local current = Workspace.CurrentCamera
+		if current and current.CameraType ~= Enum.CameraType.Custom then
+			restoreCamera()
+		end
+	end)
 	grade:Destroy()
 	if dof and savedDof then
 		dof.Enabled, dof.FarIntensity, dof.FocusDistance, dof.InFocusRadius, dof.NearIntensity = table.unpack(savedDof)
