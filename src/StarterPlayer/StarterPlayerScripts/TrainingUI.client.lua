@@ -288,31 +288,25 @@ TrainingUpdate.OnClientEvent:Connect(function(data)
 	end
 end)
 
--- ===== ProximityPrompt prijungimas prie visų treniruočių stočių =====
-local function connectStation(part)
-	local stationType = part:GetAttribute("StationType")
-	local prompt = part:FindFirstChild("TrainPrompt")
-	if not stationType or not prompt then
+-- ===== Treniruočių stotys =====
+-- StreamingEnabled: stotys gali atkeliauti vėliau (arba išnykti ir grįžti kaip nauji objektai),
+-- todėl klausomės visų ProximityPrompt paspaudimų, o ne kiekvienos stoties atskirai.
+local ProximityPromptService = game:GetService("ProximityPromptService")
+ProximityPromptService.PromptTriggered:Connect(function(prompt, triggeringPlayer)
+	if triggeringPlayer ~= player or prompt.Name ~= "TrainPrompt" then
 		return
 	end
-	prompt.Triggered:Connect(function(triggeringPlayer)
-		if triggeringPlayer ~= player then
-			return
-		end
-		local defaultFocus = TrainingConfig.StationDefaultFocus[stationType]
-		if defaultFocus then
-			selectedFocus = defaultFocus
-			refreshFocusButtons()
-		end
-		frame.Visible = true
-	end)
-end
-
-local gymLayout = Workspace:WaitForChild("GymLayout")
-for _, child in ipairs(gymLayout:GetChildren()) do
-	if child:IsA("BasePart") and child:GetAttribute("StationType") then
-		connectStation(child)
+	local part = prompt.Parent
+	local stationType = part and part:GetAttribute("StationType")
+	if not stationType then
+		return
 	end
-end
+	local defaultFocus = TrainingConfig.StationDefaultFocus[stationType]
+	if defaultFocus then
+		selectedFocus = defaultFocus
+		refreshFocusButtons()
+	end
+	frame.Visible = true
+end)
 
 print("TrainingUI paruoštas.")

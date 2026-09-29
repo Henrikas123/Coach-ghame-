@@ -755,6 +755,32 @@ S.fight_result = {
 		assert(card.Visible, "result card not shown")
 	end,
 }
+S.flow_train_prompt = {
+	seed = freshSeed,
+	run = function(api)
+		local station = api.state().getService("Workspace").GymLayout.PunchingBagStation
+		api.state().getSignal(api.state().getService("ProximityPromptService"), "PromptTriggered"):Fire(station.TrainPrompt, api.player())
+		api.wait(1)
+	end,
+	check = function(api)
+		local menu = api.find("TrainingGui/TrainingMenu")
+		assert(menu.Visible, "training menu did not open")
+	end,
+}
+S.flow_train_button = {
+	seed = freshSeed,
+	run = function(api)
+		local station = api.state().getService("Workspace").GymLayout.PunchingBagStation
+		api.state().getSignal(api.state().getService("ProximityPromptService"), "PromptTriggered"):Fire(station.TrainPrompt, api.player())
+		api.wait(1)
+		api.click("TrainingGui/TrainingMenu/TrainButton")
+		api.wait(1)
+	end,
+	check = function(api)
+		local alex = api.profile().studentsList[1]
+		assert(alex and alex.stats.power > 14, "training via the Train button did nothing (power " .. tostring(alex and alex.stats.power) .. ")")
+	end,
+}
 S.tournament_fresh = { seed = freshSeed, run = function(api) api.open("Tournament") end }
 S.flow_tournament_enter = {
 	seed = richSeed,

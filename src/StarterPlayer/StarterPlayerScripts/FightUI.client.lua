@@ -665,20 +665,12 @@ task.spawn(function()
 	end
 end)
 
--- Ring prompt opens the picker
-task.spawn(function()
-	local gym = Workspace:WaitForChild("GymLayout", 10)
-	local ring = gym and gym:WaitForChild("RingPlaceholder", 10)
-	local prompt = ring and ring:WaitForChild("FightPrompt", 10)
-	if not prompt then
-		warn("FightUI: FightPrompt nerastas")
-		return
+-- Ring prompt opens the picker. Listened to globally: with StreamingEnabled the ring can stream in
+-- late or stream out and come back as a new instance (e.g. after a fight in a far arena).
+game:GetService("ProximityPromptService").PromptTriggered:Connect(function(prompt, triggerPlayer)
+	if triggerPlayer == player and prompt.Name == "FightPrompt" and not broadcast.Visible then
+		openPicker()
 	end
-	prompt.Triggered:Connect(function(triggerPlayer)
-		if triggerPlayer == player and not broadcast.Visible then
-			openPicker()
-		end
-	end)
 end)
 
 _G.CoachAcademyFightUI = { openPicker = openPicker }

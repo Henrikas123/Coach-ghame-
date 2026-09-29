@@ -352,6 +352,19 @@ task.spawn(function()
 	render()
 end)
 
+-- StreamingEnabled: the target part can arrive late or stream out and back in -> rebuild the marker
+task.spawn(function()
+	while gui.Parent do
+		task.wait(2)
+		if ready and state and not state.done then
+			local step = STEPS[state.step]
+			if step and step.world and (not worldMarker or not worldMarker[1].Parent) then
+				showWorldMarker(step.world, step.worldLabel or "HERE")
+			end
+		end
+	end
+end)
+
 player.CharacterAdded:Connect(function()
 	if state and not state.done then
 		task.wait(1)
