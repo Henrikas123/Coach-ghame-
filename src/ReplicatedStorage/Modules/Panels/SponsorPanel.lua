@@ -67,8 +67,8 @@ function SponsorPanel.create(Kit, State)
 
 	local panel = Kit.createPanel({
 		key = "Sponsor",
-		title = "Rėmėjai",
-		subtitle = "Sutartys, pajamos ir nauji pasiūlymai",
+		title = "Sponsors",
+		subtitle = "Contracts, income and new offers",
 		icon = "🤝",
 		accent = "steel",
 		maxSize = Vector2.new(760, 560),
@@ -134,8 +134,8 @@ function SponsorPanel.create(Kit, State)
 		})
 		return value, sub
 	end
-	local activeValue, activeSub = summaryBlock("Active", "AKTYVIOS SUTARTYS", 18)
-	local incomeValue, incomeSub = summaryBlock("Income", "PAJAMOS", 196)
+	local activeValue, activeSub = summaryBlock("Active", "ACTIVE DEALS", 18)
+	local incomeValue, incomeSub = summaryBlock("Income", "INCOME", 196)
 	Kit.create("Frame", {
 		Name = "Divider",
 		BackgroundColor3 = C.border,
@@ -147,7 +147,7 @@ function SponsorPanel.create(Kit, State)
 	local refreshButton = Kit.button({
 		parent = summary,
 		name = "RefreshButton",
-		text = "Ieškoti rėmėjų",
+		text = "Find sponsors",
 		icon = "📨",
 		variant = "steel",
 		size = UDim2.new(0, 210, 0, 40),
@@ -171,7 +171,7 @@ function SponsorPanel.create(Kit, State)
 		anchor = Vector2.new(1, 0),
 	})
 
-	local _, activeHint = Kit.sectionHeader({ parent = scroll, title = "Aktyvios sutartys", hint = "", order = 2, accent = C.steelBright })
+	local _, activeHint = Kit.sectionHeader({ parent = scroll, title = "Active deals", hint = "", order = 2, accent = C.steelBright })
 	local activeHolder = Kit.create("Frame", {
 		Name = "ActiveList",
 		BackgroundTransparency = 1,
@@ -182,7 +182,7 @@ function SponsorPanel.create(Kit, State)
 	})
 	Kit.list(activeHolder, 10)
 
-	local _, offersHint = Kit.sectionHeader({ parent = scroll, title = "Pasiūlymai", hint = "", order = 4, accent = C.steelBright })
+	local _, offersHint = Kit.sectionHeader({ parent = scroll, title = "Offers", hint = "", order = 4, accent = C.steelBright })
 	local offersHolder = Kit.create("Frame", {
 		Name = "OfferList",
 		BackgroundTransparency = 1,
@@ -207,7 +207,7 @@ function SponsorPanel.create(Kit, State)
 	Kit.label({
 		parent = offersEmpty,
 		name = "Title",
-		text = "Naujų pasiūlymų nėra",
+		text = "No new offers",
 		bold = true,
 		textSize = 14,
 		size = UDim2.new(1, -250, 0, 18),
@@ -225,7 +225,7 @@ function SponsorPanel.create(Kit, State)
 	local offersEmptyButton = Kit.button({
 		parent = offersEmpty,
 		name = "SearchButton",
-		text = "Ieškoti rėmėjų",
+		text = "Find sponsors",
 		icon = "📨",
 		variant = "steel",
 		size = UDim2.new(0, 210, 0, 40),
@@ -237,7 +237,7 @@ function SponsorPanel.create(Kit, State)
 		end,
 	})
 
-	Kit.sectionHeader({ parent = scroll, title = "Didesni rėmėjai", hint = "Atsirakina kylant reputacijai", order = 6, accent = C.steelBright })
+	Kit.sectionHeader({ parent = scroll, title = "Bigger sponsors", hint = "Unlock as your reputation grows", order = 6, accent = C.steelBright })
 	local lockedHolder = Kit.card({
 		parent = scroll,
 		name = "LockedList",
@@ -280,21 +280,21 @@ function SponsorPanel.create(Kit, State)
 			if untilExpire <= 0 then
 				timer.button.SetEnabled(true)
 				timer.button.SetVariant("ghost")
-				timer.button.SetText("Sutartis baigėsi — uždaryti")
+				timer.button.SetText("Deal ended — close")
 				timer.bar.Set(1)
-				timer.caption.Text = "Sutartis baigėsi"
+				timer.caption.Text = "Deal ended"
 			elseif ready then
 				timer.button.SetEnabled(true)
 				timer.button.SetVariant("gold")
-				timer.button.SetText("Surinkti  •  " .. Kit.formatMoney(income))
+				timer.button.SetText("Collect  •  " .. Kit.formatMoney(income))
 				timer.bar.Set(1)
-				timer.caption.Text = "Pajamos paruoštos!"
+				timer.caption.Text = "Income ready!"
 			else
 				timer.button.SetEnabled(false)
 				timer.button.SetVariant("gold")
-				timer.button.SetText("Po " .. Kit.formatDuration(untilCollect))
+				timer.button.SetText("Ready in " .. Kit.formatDuration(untilCollect))
 				timer.bar.Set(1 - untilCollect / SponsorConfig.CollectCycleSeconds)
-				timer.caption.Text = "Sutartis baigsis po " .. Kit.formatDuration(untilExpire)
+				timer.caption.Text = "Deal ends in " .. Kit.formatDuration(untilExpire)
 			end
 		end
 
@@ -304,24 +304,24 @@ function SponsorPanel.create(Kit, State)
 		for _, button in ipairs({ refreshButton, offersEmptyButton }) do
 			if full then
 				button.SetEnabled(false)
-				button.SetText("Sutarčių limitas")
+				button.SetText("Deal limit reached")
 			elseif remaining > 0 then
 				button.SetEnabled(false)
-				button.SetText("Po " .. Kit.formatDuration(remaining))
+				button.SetText("Ready in " .. Kit.formatDuration(remaining))
 			else
 				button.SetEnabled(true)
-				button.SetText("Ieškoti rėmėjų")
+				button.SetText("Find sponsors")
 			end
 		end
 		if full then
-			refreshCaption.Text = string.format("Daugiausia %d aktyvios sutartys", SponsorConfig.MaxActiveSponsors)
-			offersEmptySub.Text = "Pasiekei sutarčių limitą — surink pajamas ir lauk, kol sutartis baigsis."
+			refreshCaption.Text = string.format("Max %d active deals", SponsorConfig.MaxActiveSponsors)
+			offersEmptySub.Text = "You've hit the deal limit — collect income and wait for a deal to end."
 		elseif remaining > 0 then
-			refreshCaption.Text = "Nauji pasiūlymai po " .. Kit.formatDuration(remaining)
-			offersEmptySub.Text = "Rėmėjai svarsto — nauji pasiūlymai netrukus."
+			refreshCaption.Text = "New offers in " .. Kit.formatDuration(remaining)
+			offersEmptySub.Text = "Sponsors are thinking — new offers soon."
 		else
-			refreshCaption.Text = "Galima ieškoti naujų rėmėjų"
-			offersEmptySub.Text = "Pasirašymo bonusas iškart papildys biudžetą."
+			refreshCaption.Text = "You can look for new sponsors"
+			offersEmptySub.Text = "A signing bonus lands in your budget right away."
 		end
 	end
 
@@ -344,12 +344,12 @@ function SponsorPanel.create(Kit, State)
 			incomeTotal += sponsor and sponsor.incomePerCycle or 0
 		end
 		activeValue.Text = string.format("%d / %d", #sponsors, SponsorConfig.MaxActiveSponsors)
-		activeSub.Text = #sponsors == 0 and "Dar nėra rėmėjų" or "Pasirašytos sutartys"
+		activeSub.Text = #sponsors == 0 and "No sponsors yet" or "Signed deals"
 		incomeValue.Text = Kit.formatMoney(incomeTotal)
 		incomeValue.TextColor3 = incomeTotal > 0 and C.goldBright or C.textPrimary
-		incomeSub.Text = string.format("kas %d min", math.floor(SponsorConfig.CollectCycleSeconds / 60))
-		activeHint.Text = #sponsors > 0 and string.format("%d aktyvios", #sponsors) or ""
-		offersHint.Text = #offers > 0 and string.format("%d nauji", #offers) or ""
+		incomeSub.Text = string.format("every %d min", math.floor(SponsorConfig.CollectCycleSeconds / 60))
+		activeHint.Text = #sponsors > 0 and string.format("%d active", #sponsors) or ""
+		offersHint.Text = #offers > 0 and string.format("%d new", #offers) or ""
 
 		-- Aktyvios sutartys
 		if #sponsors == 0 then
@@ -365,7 +365,7 @@ function SponsorPanel.create(Kit, State)
 			Kit.label({
 				parent = empty,
 				name = "Text",
-				text = "📭  Dar neturi rėmėjų — pasirašyk sutartį iš pasiūlymų žemiau.",
+				text = "📭  No sponsors yet — sign a deal from the offers below.",
 				textSize = 12,
 				color = C.textSecondary,
 				wrap = true,
@@ -396,7 +396,7 @@ function SponsorPanel.create(Kit, State)
 				Kit.label({
 					parent = cardFrame,
 					name = "Income",
-					text = string.format("<font color=\"#ECC85C\"><b>%s</b></font> kas %d min", Kit.formatMoney(sponsor.incomePerCycle), math.floor(SponsorConfig.CollectCycleSeconds / 60)),
+					text = string.format("<font color=\"#ECC85C\"><b>%s</b></font> every %d min", Kit.formatMoney(sponsor.incomePerCycle), math.floor(SponsorConfig.CollectCycleSeconds / 60)),
 					rich = true,
 					textSize = 12,
 					color = C.textSecondary,
@@ -421,7 +421,7 @@ function SponsorPanel.create(Kit, State)
 				local collectButton = Kit.button({
 					parent = cardFrame,
 					name = "CollectButton",
-					text = "Surinkti",
+					text = "Collect",
 					variant = "gold",
 					size = UDim2.new(0, 196, 0, 36),
 					position = UDim2.new(1, -16, 0, 16),
@@ -467,7 +467,7 @@ function SponsorPanel.create(Kit, State)
 				Kit.label({
 					parent = cardFrame,
 					name = "Duration",
-					text = string.format("Trukmė %d min  •  Prestižas %s", math.floor(sponsor.durationSeconds / 60), Kit.starsRich(sponsor.minStars)),
+					text = string.format("%d min deal  •  Prestige %s", math.floor(sponsor.durationSeconds / 60), Kit.starsRich(sponsor.minStars)),
 					rich = true,
 					textSize = 12,
 					color = C.textSecondary,
@@ -478,7 +478,7 @@ function SponsorPanel.create(Kit, State)
 					parent = cardFrame,
 					name = "Terms",
 					text = string.format(
-						"Bonusas <font color=\"#ECC85C\"><b>+%s</b></font>  •  %s / %d min  •  Viso ≈ %s",
+						"Bonus <font color=\"#ECC85C\"><b>+%s</b></font>  •  %s / %d min  •  Total ≈ %s",
 						Kit.formatMoney(sponsor.signingBonus), Kit.formatMoney(sponsor.incomePerCycle),
 						math.floor(SponsorConfig.CollectCycleSeconds / 60), Kit.formatMoney(totalValue)
 					),
@@ -493,7 +493,7 @@ function SponsorPanel.create(Kit, State)
 				Kit.button({
 					parent = cardFrame,
 					name = "AcceptButton",
-					text = full and "Sutarčių limitas" or "Pasirašyti sutartį",
+					text = full and "Deal limit reached" or "Sign deal",
 					icon = full and "" or "✍️",
 					variant = "gold",
 					size = UDim2.new(1, -28, 0, 34),
@@ -535,7 +535,7 @@ function SponsorPanel.create(Kit, State)
 				Kit.label({
 					parent = row,
 					name = "Terms",
-					text = string.format("Bonusas %s  •  %s / %d min", Kit.formatMoney(sponsor.signingBonus), Kit.formatMoney(sponsor.incomePerCycle), math.floor(SponsorConfig.CollectCycleSeconds / 60)),
+					text = string.format("Bonus %s  •  %s / %d min", Kit.formatMoney(sponsor.signingBonus), Kit.formatMoney(sponsor.incomePerCycle), math.floor(SponsorConfig.CollectCycleSeconds / 60)),
 					textSize = 12,
 					color = C.textSecondary,
 					size = UDim2.new(0.5, -150, 1, 0),
@@ -544,7 +544,7 @@ function SponsorPanel.create(Kit, State)
 				Kit.label({
 					parent = row,
 					name = "Stars",
-					text = "🔒 Reikia " .. Kit.starsRich(sponsor.minStars),
+					text = "🔒 Needs " .. Kit.starsRich(sponsor.minStars),
 					rich = true,
 					bold = true,
 					textSize = 12,

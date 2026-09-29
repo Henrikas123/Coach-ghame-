@@ -114,12 +114,12 @@ ScoutSearchRequest.OnServerEvent:Connect(function(player)
 	local lastScout = profile.lastScoutAt or 0
 	if now - lastScout < scoutCooldown then
 		local waitSeconds = scoutCooldown - (now - lastScout)
-		pushScoutUpdate(player, profile, string.format("Skautas dar ilsisi -- palauk %ds.", waitSeconds))
+		pushScoutUpdate(player, profile, string.format("Your scout is resting — wait %ds.", waitSeconds))
 		return
 	end
 
 	if profile.pinigai < scoutCost then
-		pushScoutUpdate(player, profile, string.format("Nepakanka pinigų skautui siųsti ($%d).", scoutCost))
+		pushScoutUpdate(player, profile, string.format("Not enough money to send the scout ($%d).", scoutCost))
 		return
 	end
 
@@ -132,7 +132,7 @@ ScoutSearchRequest.OnServerEvent:Connect(function(player)
 	end
 	profile.scoutCandidates = candidates
 
-	pushScoutUpdate(player, profile, string.format("Skautas rado %d kandidatus!", #candidates))
+	pushScoutUpdate(player, profile, string.format("Your scout found %d prospects!", #candidates))
 end)
 
 ScoutRecruitRequest.OnServerEvent:Connect(function(player, candidateIndex)
@@ -150,13 +150,13 @@ ScoutRecruitRequest.OnServerEvent:Connect(function(player, candidateIndex)
 
 	local candidate = profile.scoutCandidates[candidateIndex]
 	if not candidate then
-		pushScoutUpdate(player, profile, "Šis kandidatas jau nebeprieinamas.")
+		pushScoutUpdate(player, profile, "This prospect is no longer available.")
 		return
 	end
 
 	local cost = candidate.recruitCost or ScoutConfig.RecruitCostByPotential[candidate.potencialas] or 150
 	if profile.pinigai < cost then
-		pushScoutUpdate(player, profile, string.format("Nepakanka pinigų samdyti %s ($%d).", candidate.name, cost))
+		pushScoutUpdate(player, profile, string.format("Not enough money to sign %s ($%d).", candidate.name, cost))
 		return
 	end
 
@@ -171,13 +171,13 @@ ScoutRecruitRequest.OnServerEvent:Connect(function(player, candidateIndex)
 	student.satisfactionScore = 80
 	table.insert(profile.studentsList, student)
 
-	pushScoutUpdate(player, profile, string.format("Pasamdytas: %s (%s)! -$%d", student.name, student.potencialas, cost))
+	pushScoutUpdate(player, profile, string.format("Signed: %s (%s)! -$%d", student.name, student.potencialas, cost))
 
 	-- Atnaujinam ir TrainingUpdate, kad naujas narys iškart atsirastų treniruočių sąraše
 	TrainingUpdate:FireClient(player, {
 		pinigai = profile.pinigai,
 		studentsList = profile.studentsList,
-		message = string.format("%s prisijungė prie akademijos per skautą!", student.name),
+		message = string.format("%s joined your academy through your scout!", student.name),
 	})
 end)
 
@@ -199,21 +199,21 @@ ScoutReportRequest.OnServerEvent:Connect(function(player, candidateIndex)
 	end
 	local candidate = profile.scoutCandidates and profile.scoutCandidates[candidateIndex]
 	if not candidate then
-		pushScoutUpdate(player, profile, "Šis kandidatas jau nebeprieinamas.")
+		pushScoutUpdate(player, profile, "This prospect is no longer available.")
 		return
 	end
 	if candidate.reportPurchased then
-		pushScoutUpdate(player, profile, string.format("Ataskaita apie %s jau nupirkta.", candidate.name))
+		pushScoutUpdate(player, profile, string.format("You already have the report on %s.", candidate.name))
 		return
 	end
 	local cost = ScoutConfig.ReportCost or 40
 	if profile.pinigai < cost then
-		pushScoutUpdate(player, profile, string.format("Nepakanka pinigų skauto ataskaitai ($%d).", cost))
+		pushScoutUpdate(player, profile, string.format("Not enough money for the scout report ($%d).", cost))
 		return
 	end
 	profile.pinigai -= cost
 	candidate.reportPurchased = true
-	pushScoutUpdate(player, profile, string.format("Skauto ataskaita: %s genetinės lubos atskleistos! -$%d", candidate.name, cost))
+	pushScoutUpdate(player, profile, string.format("Scout report: %s's potential ceiling revealed! -$%d", candidate.name, cost))
 end)
 
 _G.CoachAcademyScoutPublic = publicCandidates

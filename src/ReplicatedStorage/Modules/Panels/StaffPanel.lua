@@ -30,12 +30,12 @@ end
 -- Kiek laiko uzteks biudzeto atlyginimams (ne "ciklais" -- zaidejui aiskiau laikas)
 local function runwayText(cycles, intervalSeconds)
 	if cycles >= 100 then
-		return "8+ val"
+		return "8+ h"
 	end
 	local minutes = cycles * intervalSeconds // 60
 	if minutes >= 60 then
 		local rest = minutes % 60
-		return rest == 0 and string.format("%d val", minutes // 60) or string.format("%d val %d min", minutes // 60, rest)
+		return rest == 0 and string.format("%d h", minutes // 60) or string.format("%d h %d min", minutes // 60, rest)
 	end
 	return string.format("%d min", minutes)
 end
@@ -45,8 +45,8 @@ function StaffPanel.create(Kit, State)
 
 	local panel = Kit.createPanel({
 		key = "Staff",
-		title = "Personalas",
-		subtitle = "Samdyk komandą — kiekvienas darbuotojas duoda bonusą",
+		title = "Staff",
+		subtitle = "Build your team — every hire gives a bonus",
 		icon = "👥",
 		accent = "steel",
 		maxSize = Vector2.new(760, 560),
@@ -77,9 +77,9 @@ function StaffPanel.create(Kit, State)
 	})
 	local summaryColumns = {}
 	for index, def in ipairs({
-		{ key = "team", caption = "KOMANDA" },
-		{ key = "payroll", caption = "ATLYGINIMAI" },
-		{ key = "runway", caption = "BIUDŽETO UŽTENKA" },
+		{ key = "team", caption = "TEAM" },
+		{ key = "payroll", caption = "SALARIES" },
+		{ key = "runway", caption = "BUDGET LASTS" },
 	}) do
 		local column = Kit.create("Frame", {
 			Name = "Col_" .. def.key,
@@ -130,7 +130,7 @@ function StaffPanel.create(Kit, State)
 		})
 	end
 
-	Kit.sectionHeader({ parent = scroll, title = "Samdymas", order = 2, accent = C.steelBright })
+	Kit.sectionHeader({ parent = scroll, title = "Hiring", order = 2, accent = C.steelBright })
 
 	-- ========================================================
 	-- DARBUOTOJU KORTELES
@@ -191,7 +191,7 @@ function StaffPanel.create(Kit, State)
 		local hiredBadge = Kit.badge({
 			parent = nameRow,
 			name = "Hired",
-			text = "✓ Dirba",
+			text = "✓ Hired",
 			color = C.gold,
 			solid = true,
 			height = 20,
@@ -210,7 +210,7 @@ function StaffPanel.create(Kit, State)
 		Kit.label({
 			parent = cardFrame,
 			name = "Salary",
-			text = string.format("Atlyginimas $%d / %d min", role.salary or 0, math.floor(StaffConfig.PayrollIntervalSeconds / 60)),
+			text = string.format("Salary $%d / %d min", role.salary or 0, math.floor(StaffConfig.PayrollIntervalSeconds / 60)),
 			textSize = 12,
 			color = C.textSecondary,
 			align = Enum.TextXAlignment.Right,
@@ -221,7 +221,7 @@ function StaffPanel.create(Kit, State)
 		local actionButton = Kit.button({
 			parent = cardFrame,
 			name = "ActionButton",
-			text = "Samdyti",
+			text = "Hire",
 			variant = "gold",
 			size = UDim2.new(0, 170, 0, 34),
 			position = UDim2.new(1, -16, 1, -10),
@@ -270,7 +270,7 @@ function StaffPanel.create(Kit, State)
 	end
 
 	-- Anksciau pasamdyti darbuotojai, kuriu nebera samdymo sarase (pvz. SpeedCoach, MentalCoach)
-	local legacyHeader = Kit.sectionHeader({ parent = scroll, title = "Kiti darbuotojai", hint = "Nebesamdomi, bet dar dirba", order = 50, accent = C.steelBright })
+	local legacyHeader = Kit.sectionHeader({ parent = scroll, title = "Other staff", hint = "No longer for hire, still working", order = 50, accent = C.steelBright })
 	local legacyEntries = {}
 	for roleId in pairs(StaffConfig.Roles) do
 		if not table.find(StaffConfig.Order, roleId) then
@@ -294,18 +294,18 @@ function StaffPanel.create(Kit, State)
 		end
 		local minutes = math.floor(StaffConfig.PayrollIntervalSeconds / 60)
 		summaryColumns.team.value.Text = string.format("%d / %d", #staff, #StaffConfig.Order)
-		summaryColumns.team.sub.Text = #staff == 0 and "Dar niekas nedirba" or "Pasamdyti darbuotojai"
+		summaryColumns.team.sub.Text = #staff == 0 and "Nobody hired yet" or "Staff hired"
 		summaryColumns.payroll.value.Text = Kit.formatMoney(totalSalary)
-		summaryColumns.payroll.sub.Text = string.format("kas %d min", minutes)
+		summaryColumns.payroll.sub.Text = string.format("every %d min", minutes)
 		if totalSalary > 0 then
 			local cycles = math.floor(money / totalSalary)
 			summaryColumns.runway.value.Text = runwayText(cycles, StaffConfig.PayrollIntervalSeconds)
 			summaryColumns.runway.value.TextColor3 = cycles < 3 and C.crimsonBright or (cycles < 10 and C.goldBright or C.textPrimary)
-			summaryColumns.runway.sub.Text = cycles < 3 and "⚠ Trūkstant pinigų darbuotojai išeis" or "atlyginimams mokėti"
+			summaryColumns.runway.sub.Text = cycles < 3 and "⚠ Staff quit if you can't pay" or "of salaries covered"
 		else
 			summaryColumns.runway.value.Text = "—"
 			summaryColumns.runway.value.TextColor3 = C.textPrimary
-			summaryColumns.runway.sub.Text = "Nėra atlyginimų"
+			summaryColumns.runway.sub.Text = "No salaries"
 		end
 
 		local anyLegacy = false
@@ -324,16 +324,16 @@ function StaffPanel.create(Kit, State)
 				local confirming = confirmFire[roleId] and confirmFire[roleId] > now
 				entry.button.SetVariant(confirming and "crimson" or "ghost")
 				entry.button.SetEnabled(true)
-				entry.button.SetText(confirming and "Tikrai atleisti?" or "Atleisti")
+				entry.button.SetText(confirming and "Really fire?" or "Fire")
 			else
 				local cost = entry.role.hireCost or 0
 				entry.button.SetVariant("gold")
 				if money >= cost then
 					entry.button.SetEnabled(true)
-					entry.button.SetText("Samdyti  •  " .. Kit.formatMoney(cost))
+					entry.button.SetText("Hire  •  " .. Kit.formatMoney(cost))
 				else
 					entry.button.SetEnabled(false)
-					entry.button.SetText("Trūksta " .. Kit.formatMoney(cost - money))
+					entry.button.SetText("Need " .. Kit.formatMoney(cost - money))
 				end
 			end
 		end

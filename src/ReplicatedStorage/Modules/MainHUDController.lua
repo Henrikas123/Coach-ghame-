@@ -37,20 +37,20 @@ local COLORS = {
 }
 
 local REPUTATION_TIER_LT = {
-	["Local Coach"]       = "Vietinis treneris",
-	["Rising Coach"]      = "Kylantis treneris",
-	["Respected Coach"]   = "Gerbiamas treneris",
-	["Elite Coach"]       = "Elitinis treneris",
-	["World-Class Coach"] = "Pasaulinio lygio treneris",
+	["Local Coach"]       = "Local Coach",
+	["Rising Coach"]      = "Rising Coach",
+	["Respected Coach"]   = "Respected Coach",
+	["Elite Coach"]       = "Elite Coach",
+	["World-Class Coach"] = "World-Class Coach",
 }
 
 local NAV_ITEMS = {
-	{ key = "Profile",    label = "Profilis",   tier = "primary",   icon = "\240\159\145\164" },
-	{ key = "Academy",    label = "Akademija",  tier = "primary",   icon = "\240\159\143\155" },
-	{ key = "Staff",      label = "Personalas", tier = "secondary", icon = "\240\159\145\165" },
-	{ key = "Scout",      label = "Skautai",    tier = "secondary", icon = "\240\159\148\142" },
-	{ key = "Sponsor",    label = "Remejai",    tier = "secondary", icon = "\240\159\164\157" },
-	{ key = "Tournament", label = "Turnyrai",   tier = "highlight", icon = "\240\159\143\134" },
+	{ key = "Profile",    label = "Profile",    tier = "primary",   icon = "\240\159\145\164" },
+	{ key = "Academy",    label = "Academy",    tier = "primary",   icon = "\240\159\143\155" },
+	{ key = "Staff",      label = "Staff",      tier = "secondary", icon = "\240\159\145\165" },
+	{ key = "Scout",      label = "Scouting",   tier = "secondary", icon = "\240\159\148\142" },
+	{ key = "Sponsor",    label = "Sponsors",   tier = "secondary", icon = "\240\159\164\157" },
+	{ key = "Tournament", label = "Tournaments", tier = "highlight", icon = "\240\159\143\134" },
 }
 
 local TIER_STYLE = {
@@ -214,7 +214,7 @@ local function buildStatusPanel(screenGui)
 	repRow.Parent = panel
 
 	local repLabel = makeLabel({
-		parent = repRow, name = "ReputationValue", text = "Vietinis treneris",
+		parent = repRow, name = "ReputationValue", text = "Local Coach",
 		font = Enum.Font.Gotham, color = COLORS.textSecondary, size = 13,
 		uiSize = UDim2.new(1, 0, 0, 16), position = UDim2.new(0, 0, 0, 0), zIndex = 3,
 	})

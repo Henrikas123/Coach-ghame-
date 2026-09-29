@@ -19,11 +19,11 @@ local ProfilePanel = {}
 
 -- Karjeros laiptai: pirmi 3 atitinka FightConfig.Ladder, paskutiniai 2 -- ateities tikslai
 local CAREER_STEPS = {
-	{ name = "Vietinės kovos", ladderIndex = 1, icon = "🥊" },
-	{ name = "Regionas", ladderIndex = 2, icon = "🗺️" },
-	{ name = "WBF kontraktas", ladderIndex = 3, icon = "📝" },
-	{ name = "Reitingai", ladderIndex = nil, icon = "📊" },
-	{ name = "Pasaulio titulas", ladderIndex = nil, icon = "👑" },
+	{ name = "Local Amateur", ladderIndex = 1, icon = "🥊" },
+	{ name = "Regional", ladderIndex = 2, icon = "🗺️" },
+	{ name = "WBF Contract", ladderIndex = 3, icon = "📝" },
+	{ name = "Rankings", ladderIndex = nil, icon = "📊" },
+	{ name = "World Title", ladderIndex = nil, icon = "👑" },
 }
 
 function ProfilePanel.create(Kit, State)
@@ -32,8 +32,8 @@ function ProfilePanel.create(Kit, State)
 
 	local panel = Kit.createPanel({
 		key = "Profile",
-		title = "Trenerio profilis",
-		subtitle = "Karjera, reputacija ir pasiekimai",
+		title = "Coach Profile",
+		subtitle = "Career, reputation and achievements",
 		icon = "👤",
 		accent = "gold",
 		maxSize = Vector2.new(760, 680),
@@ -133,7 +133,7 @@ function ProfilePanel.create(Kit, State)
 	local _, tierLabel = Kit.badge({
 		parent = tierRow,
 		name = "Tier",
-		text = "Vietinis treneris",
+		text = "Local Coach",
 		color = C.gold,
 		order = 2,
 	})
@@ -156,7 +156,7 @@ function ProfilePanel.create(Kit, State)
 	Kit.label({
 		parent = hero,
 		name = "RepCaption",
-		text = "REPUTACIJA",
+		text = "REPUTATION",
 		bold = true,
 		textSize = 11,
 		color = C.textSecondary,
@@ -193,14 +193,14 @@ function ProfilePanel.create(Kit, State)
 
 	local tiles = {}
 	local TILE_DEFS = {
-		{ key = "fighters", icon = "🥊", label = "Kovotojai" },
-		{ key = "wins", icon = "🏆", label = "Pergalės" },
-		{ key = "winRate", icon = "📈", label = "Pergalių %" },
-		{ key = "champs", icon = "🥇", label = "Turnyrų titulai" },
-		{ key = "balance", icon = "💰", label = "Balansas", accent = C.goldBright },
-		{ key = "profit", icon = "📊", label = "Pelnas" },
-		{ key = "followers", icon = "📱", label = "Sekėjai" },
-		{ key = "sponsors", icon = "🤝", label = "Remėjai" },
+		{ key = "fighters", icon = "🥊", label = "Fighters" },
+		{ key = "wins", icon = "🏆", label = "Wins" },
+		{ key = "winRate", icon = "📈", label = "Win rate" },
+		{ key = "champs", icon = "🥇", label = "Titles" },
+		{ key = "balance", icon = "💰", label = "Balance", accent = C.goldBright },
+		{ key = "profit", icon = "📊", label = "Profit" },
+		{ key = "followers", icon = "📱", label = "Followers" },
+		{ key = "sponsors", icon = "🤝", label = "Sponsors" },
 	}
 	for index, def in ipairs(TILE_DEFS) do
 		tiles[def.key] = Kit.statTile({
@@ -217,7 +217,7 @@ function ProfilePanel.create(Kit, State)
 	-- ========================================================
 	-- KARJEROS KELIAS
 	-- ========================================================
-	Kit.sectionHeader({ parent = scroll, title = "Karjeros kelias", hint = "Geriausio kovotojo pasiekimas", order = 3 })
+	Kit.sectionHeader({ parent = scroll, title = "Career Path", hint = "Your best fighter's progress", order = 3 })
 
 	local careerCard = Kit.card({
 		parent = scroll,
@@ -326,7 +326,7 @@ function ProfilePanel.create(Kit, State)
 	-- ========================================================
 	-- TROFEJU LENTYNA
 	-- ========================================================
-	local _, trophyHint = Kit.sectionHeader({ parent = scroll, title = "Trofėjų lentyna", hint = "", order = 5 })
+	local _, trophyHint = Kit.sectionHeader({ parent = scroll, title = "Trophy Shelf", hint = "", order = 5 })
 
 	local trophyGrid = Kit.create("Frame", {
 		Name = "TrophyGrid",
@@ -471,26 +471,26 @@ function ProfilePanel.create(Kit, State)
 			local span = math.max(1, nextRequired - floorValue)
 			repBar.Set((current - floorValue) / span)
 			progressCaption.Text = string.format(
-				"%d / %d iki „%s“",
+				"%d / %d to “%s”",
 				current, nextRequired, Kit.translate("tiers", rep.nextTierName)
 			)
 		else
 			repBar.Set(1)
-			progressCaption.Text = "Aukščiausias lygis pasiektas"
+			progressCaption.Text = "Top tier reached"
 		end
 	end
 
 	local function renderTiles(s, summary)
 		local fights = summary.wins + summary.losses + summary.draws
-		tiles.fighters.Set(tostring(summary.fighters), string.format("%d narių  •  %d bandomųjų", summary.members, summary.trials))
-		tiles.wins.Set(tostring(summary.wins), string.format("Pralaimėjimai: %d", summary.losses))
+		tiles.fighters.Set(tostring(summary.fighters), string.format("%d members  •  %d on trial", summary.members, summary.trials))
+		tiles.wins.Set(tostring(summary.wins), string.format("Losses: %d", summary.losses))
 		if fights > 0 then
-			tiles.winRate.Set(string.format("%d%%", math.floor(summary.wins / fights * 100 + 0.5)), string.format("%d kovų", fights))
+			tiles.winRate.Set(string.format("%d%%", math.floor(summary.wins / fights * 100 + 0.5)), string.format("%d fights", fights))
 		else
-			tiles.winRate.Set("—", "Dar nekovota")
+			tiles.winRate.Set("—", "No fights yet")
 		end
-		tiles.champs.Set(tostring(summary.champs), "Turnyrų čempionai", summary.champs > 0 and C.goldBright or C.textPrimary)
-		tiles.balance.Set(s.money and Kit.formatMoney(s.money) or "—", "Dabartinis biudžetas")
+		tiles.champs.Set(tostring(summary.champs), "Tournament wins", summary.champs > 0 and C.goldBright or C.textPrimary)
+		tiles.balance.Set(s.money and Kit.formatMoney(s.money) or "—", "Current budget")
 
 		local earned = s.stats.lifetimeEarned or 0
 		local spent = s.stats.lifetimeSpent or 0
@@ -500,10 +500,10 @@ function ProfilePanel.create(Kit, State)
 			string.format("+%s  /  -%s", Kit.formatMoney(earned), Kit.formatMoney(spent)),
 			profit > 0 and C.goldBright or (profit < 0 and C.crimsonBright or C.textPrimary)
 		)
-		tiles.followers.Set(Kit.formatNumber(s.marketing.followers or 0), "Socialiniai tinklai")
+		tiles.followers.Set(Kit.formatNumber(s.marketing.followers or 0), "Social media")
 		tiles.sponsors.Set(
 			string.format("%d / %d", #(s.sponsor.sponsors or {}), SponsorConfig.MaxActiveSponsors),
-			"Aktyvūs kontraktai"
+			"Active contracts"
 		)
 	end
 
@@ -552,17 +552,17 @@ function ProfilePanel.create(Kit, State)
 			if step.ladderIndex then
 				local count = summary.tierCounts[step.ladderIndex] or 0
 				if count > 0 then
-					nodeInfo.sub.Text = string.format("%d %s", count, count == 1 and "kovotojas" or "kovotojai")
+					nodeInfo.sub.Text = string.format("%d %s", count, count == 1 and "fighter" or "fighters")
 				elseif isReached then
-					nodeInfo.sub.Text = "Pereita"
+					nodeInfo.sub.Text = "Cleared"
 				elseif isNextGoal then
-					nodeInfo.sub.Text = "Kitas tikslas"
+					nodeInfo.sub.Text = "Next goal"
 					nodeInfo.sub.TextColor3 = C.gold
 				else
-					nodeInfo.sub.Text = "Užrakinta"
+					nodeInfo.sub.Text = "Locked"
 				end
 			else
-				nodeInfo.sub.Text = "Netrukus"
+				nodeInfo.sub.Text = "Coming soon"
 			end
 		end
 
@@ -576,13 +576,13 @@ function ProfilePanel.create(Kit, State)
 		if best then
 			local tier = FightConfig.Ladder[best.careerTier or 1]
 			local nextTier = FightConfig.Ladder[(best.careerTier or 1) + 1]
-			local text = string.format("Geriausias: %s  •  %s", best.name, Kit.translate("ladder", tier and tier.name))
+			local text = string.format("Best: %s  •  %s", best.name, Kit.translate("ladder", tier and tier.name))
 			if nextTier and tier then
-				text ..= string.format("  •  %d/%d pergalių iki „%s“", best.tierWins or 0, tier.winsToPromote, Kit.translate("ladder", nextTier.name))
+				text ..= string.format("  •  %d/%d wins to “%s”", best.tierWins or 0, tier.winsToPromote, Kit.translate("ladder", nextTier.name))
 			end
 			careerFooter.Text = text
 		else
-			careerFooter.Text = "Paruošk kovotoją kovoms (vidutinė statistika ≥ 15), kad pradėtum karjerą."
+			careerFooter.Text = "Get a fighter fight-ready (average stats ≥ 15) to start a career."
 		end
 	end
 
@@ -602,7 +602,7 @@ function ProfilePanel.create(Kit, State)
 				slotInfo.stroke.Color = C.gold
 				slotInfo.stroke.Transparency = 0.25
 				slotInfo.countText.Text = string.format("×%d", count)
-				slotInfo.status.Text = "Iškovota"
+				slotInfo.status.Text = "Won"
 				slotInfo.status.TextColor3 = C.goldBright
 			else
 				slotInfo.cup.TextTransparency = unlocked and 0.55 or 0.8
@@ -610,13 +610,13 @@ function ProfilePanel.create(Kit, State)
 				slotInfo.stroke.Color = C.border
 				slotInfo.stroke.Transparency = 0.45
 				slotInfo.status.TextColor3 = C.textSecondary
-				slotInfo.status.Text = unlocked and "Neiškovota"
-					or string.format("Reikia <font color=\"#D4AF37\">%s</font>", string.rep("★", tournament.minStars or 1))
+				slotInfo.status.Text = unlocked and "Not won yet"
+					or string.format("Needs <font color=\"#D4AF37\">%s</font>", string.rep("★", tournament.minStars or 1))
 			end
 		end
 		if trophyHint then
 			-- trofejai pagal pavadinima skaiciuojami nuo sio atnaujinimo; bendras skaicius -- is kovotoju
-			trophyHint.Text = string.format("Iškovota: %d", math.max(earnedTotal, summary and summary.champs or 0))
+			trophyHint.Text = string.format("Won: %d", math.max(earnedTotal, summary and summary.champs or 0))
 		end
 	end
 

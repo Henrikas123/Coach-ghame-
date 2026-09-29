@@ -1012,98 +1012,50 @@ function PanelKit.formatSignedMoney(value)
 	return PanelKit.formatMoney(n)
 end
 
--- 3725 -> "1 val 02 min", 125 -> "2:05"
+-- 3725 -> "1 h 02 min", 125 -> "2:05"
 function PanelKit.formatDuration(seconds)
 	local s = math.max(0, math.floor(seconds or 0))
 	if s >= 3600 then
-		return string.format("%d val %02d min", s // 3600, (s % 3600) // 60)
+		return string.format("%d h %02d min", s // 3600, (s % 3600) // 60)
 	end
 	return string.format("%d:%02d", s // 60, s % 60)
 end
 
--- Lietuviska daugiskaita: plural(1, "pergalė", "pergalės", "pergalių") -> "1 pergalė"
-function PanelKit.plural(n, one, few, many)
-	local lastTwo = n % 100
-	local last = n % 10
-	local word
-	if last == 1 and lastTwo ~= 11 then
-		word = one
-	elseif last >= 2 and last <= 9 and (lastTwo < 12 or lastTwo > 19) then
-		word = few
-	else
-		word = many
-	end
-	return string.format("%d %s", n, word)
+-- plural(1, "win", "wins") -> "1 win", plural(3, "win", "wins") -> "3 wins"
+function PanelKit.plural(n, one, many)
+	return string.format("%d %s", n, n == 1 and one or many)
 end
 
 function PanelKit.formatTimeAgo(seconds)
 	local s = math.max(0, math.floor(seconds or 0))
 	if s < 60 then
-		return "ką tik"
+		return "just now"
 	elseif s < 3600 then
-		return string.format("prieš %d min", s // 60)
+		return string.format("%d min ago", s // 60)
 	elseif s < 86400 then
-		return string.format("prieš %d val", s // 3600)
+		return string.format("%d h ago", s // 3600)
 	end
-	return string.format("prieš %d d.", s // 86400)
+	return string.format("%d d ago", s // 86400)
 end
 
--- Lietuviski pavadinimai zaidimo duomenims (config'uose likę angliski ID)
+-- Display names for game data ids (configs keep their ids as keys)
 PanelKit.L = {
-	tiers = {
-		["Local Coach"] = "Vietinis treneris",
-		["Rising Coach"] = "Kylantis treneris",
-		["Respected Coach"] = "Gerbiamas treneris",
-		["Elite Coach"] = "Elitinis treneris",
-		["World-Class Coach"] = "Pasaulinio lygio treneris",
-	},
-	ladder = {
-		["Local Amateur"] = "Vietinės kovos",
-		["Regional"] = "Regionas",
-		["WBF"] = "WBF",
-	},
+	tiers = {},
+	ladder = {},
 	stats = {
-		power = "Jėga",
-		speed = "Greitis",
-		defense = "Gynyba",
-		stamina = "Ištvermė",
-		technique = "Technika",
+		power = "Power",
+		speed = "Speed",
+		defense = "Defense",
+		stamina = "Stamina",
+		technique = "Technique",
 	},
-	personality = {
-		["Aggressive"] = "Agresyvus",
-		["Defensive"] = "Gynybiškas",
-		["Hard Worker"] = "Darbštus",
-		["Lazy"] = "Tingus",
-		["Nervous"] = "Nervingas",
-		["Confident"] = "Pasitikintis",
-		["Disciplined"] = "Disciplinuotas",
-		["Natural Talent"] = "Įgimtas talentas",
-	},
-	potential = {
-		Common = "Įprastas",
-		Rare = "Retas",
-		Legendary = "Legendinis",
-	},
+	personality = {},
+	potential = {},
 	stage = {
-		Trial = "Bandomasis",
-		Member = "Narys",
+		Trial = "Trial",
+		Member = "Member",
 	},
-	-- Config'uose pavadinimai be diakritiku (naudojami kaip raktai) -- rodome taisyklingai
-	names = {
-		["Miesto Taure"] = "Miesto taurė",
-		["Regiono Cempionatas"] = "Regiono čempionatas",
-		["Nacionalinis Turnyras"] = "Nacionalinis turnyras",
-		["Pasaulio Taure"] = "Pasaulio taurė",
-		["Legendu Arena"] = "Legendų arena",
-		["Azuolo Mityba"] = "Ąžuolo Mityba",
-		["Gelezinis Kumstis"] = "Geležinis Kumštis",
-		["Cempionu Studija"] = "Čempionų Studija",
-		["Nacionaline Arena"] = "Nacionalinė Arena",
-		["Tomas Zaibas"] = "Tomas Žaibas",
-		["Linas Perkunas"] = "Linas Perkūnas",
-		["Audrius Gelezis"] = "Audrius Geležis",
-		["Vytas Azuolas"] = "Vytas Ąžuolas",
-	},
+	names = {},
 }
 
 function PanelKit.translate(group, key)
@@ -1111,7 +1063,7 @@ function PanelKit.translate(group, key)
 	return (map and key and map[key]) or key or "-"
 end
 
--- Rodomas pavadinimas (turnyrai, remejai, varzovai) su lietuviskomis raidemis
+-- Display name for tournaments, sponsors and opponents
 function PanelKit.displayName(name)
 	return PanelKit.L.names[name] or name or "-"
 end
@@ -1164,29 +1116,8 @@ function PanelKit.potentialBadge(props)
 	})
 end
 
--- Serveriniu zinuciu be diakritiku / su angliskais terminais pataisymas pries rodant toast
+-- Small typography fixes for server messages before they are shown in a toast
 local MESSAGE_FIXES = {
-	{ "tapo jusu remeju", "tapo jūsų rėmėju" },
-	{ "pasirasymo bonusas", "pasirašymo bonusas" },
-	{ "Nauji remeju pasiulymai gauti", "Gauti nauji rėmėjų pasiūlymai" },
-	{ "Sis pasiulymas nebegalioja", "Šis pasiūlymas nebegalioja" },
-	{ "Jau turite maksimalu remeju skaiciu", "Jau turite daugiausia galimų rėmėjų" },
-	{ "iki kitos remeju paieskos", "iki kitos rėmėjų paieškos" },
-	{ "Remimo sutartis baigesi", "Rėmimo sutartis baigėsi" },
-	{ "Kol kas nei vienas remejas nesusidomejo %- kelkite reputacija", "Kol kas nė vienas rėmėjas nesusidomėjo — kelkite reputaciją" },
-	{ "Surinkta (%$%d+) is ", "Surinkta %1 iš " },
-	{ " is remejo", " iš rėmėjo" },
-	{ "%(Rare%)", "(Retas)" },
-	{ "%(Legendary%)", "(Legendinis)" },
-	{ "%(Common%)", "(Įprastas)" },
-	{ "cempionu", "čempionu" },
-	{ "iskrito is", "iškrito iš" },
-	{ "pergale%(%-iu%)", "pergalių" },
-	{ "pralaimejo pirmame", "pralaimėjo pirmame" },
-	{ "Palauk pries dalyvaudamas kitame turnyre", "Palauk prieš dalyvaudamas kitame turnyre" },
-	{ "Nepakanka pinigu dalyvio mokesciui", "Nepakanka pinigų dalyvio mokesčiui" },
-	{ "Sis mokinys susizeides ir negali dalyvauti turnyre", "Šis kovotojas susižeidęs ir negali dalyvauti turnyre" },
-	{ "Reikia daugiau reputacijos zvaigdziu siam turnyrui", "Šiam turnyrui reikia daugiau reputacijos žvaigždžių" },
 	{ " %-%- ", " — " },
 }
 function PanelKit.localizeMessage(text)
@@ -1211,7 +1142,10 @@ end
 -- Serverio atsakymo zinute -> "error" / "success" / "info" (toast spalvai)
 function PanelKit.classifyMessage(message)
 	local text = string.lower(message or "")
-	local negative = { "nepakanka", "palauk", "negali", "nebe", "trūksta", "truksta", "jau ", "susižeid", "susizeid", "pavarg", "nepavyko", "neteising", "maksimal", "paliko", "reikia", "pralaim" }
+	local negative = {
+		"not enough", "wait ", "can't", "cannot", "no longer", "already", "injured", "too tired", "could not",
+		"invalid", "maximum", "quit:", "you need", "lost ", "not ready", "expired", "no sponsors", "blocked", "coming soon",
+	}
 	for _, word in ipairs(negative) do
 		if string.find(text, word, 1, true) then
 			return "error"

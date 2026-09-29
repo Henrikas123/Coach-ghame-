@@ -136,7 +136,7 @@ AcademyCustomize.OnServerEvent:Connect(function(player, data)
 		local trimmed = data.academyName:gsub("^%s+", ""):gsub("%s+$", "")
 		if utf8.len(trimmed) == nil then
 			-- netinkamas UTF-8 -- DataStore tokio teksto neissaugotu
-			message = "Pavadinime yra netinkamų simbolių — nepakeista."
+			message = "That name contains blocked words — not changed."
 		else
 			if #trimmed == 0 then
 				trimmed = AcademyConfig.DefaultName
@@ -152,7 +152,7 @@ AcademyCustomize.OnServerEvent:Connect(function(player, data)
 			if ok and type(filtered) == "string" then
 				profile.academyName = filtered
 			else
-				message = "Nepavyko patikrinti pavadinimo — bandyk dar kartą."
+				message = "Could not check the name — please try again."
 				warn("AcademyHandler: teksto filtravimas nepavyko", player.Name, filtered)
 			end
 		end

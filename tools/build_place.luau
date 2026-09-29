@@ -136,5 +136,36 @@ for _, name in ipairs(LEGACY_UI) do
 	end
 end
 
+-- Pasaulio tekstai anglu kalba (ProximityPrompt'ai ir isjungtas senas MainHUD)
+note("Pasaulio tekstai (EN):")
+local STATION_NAMES = {
+	PunchingBag = "Heavy Bag",
+	SpeedBag = "Speed Bag",
+	Treadmill = "Treadmill",
+	DumbbellRack = "Dumbbell Rack",
+	WeightBench = "Weight Bench",
+}
+for _, prompt in ipairs(game:GetService("Workspace"):GetDescendants()) do
+	if prompt:IsA("ProximityPrompt") then
+		if prompt.Name == "TrainPrompt" then
+			prompt.ActionText = "Train"
+			prompt.ObjectText = STATION_NAMES[prompt.ObjectText] or prompt.ObjectText
+		elseif prompt.Name == "FightPrompt" then
+			prompt.ActionText = "Start fight"
+			prompt.ObjectText = "Fight Ring"
+		end
+		note("  %s: %s | %s", prompt.Parent.Name, prompt.ActionText, prompt.ObjectText)
+	end
+end
+local oldHud = game:GetService("StarterGui"):FindFirstChild("MainHUD")
+if oldHud then
+	for name, text in pairs({ AcademyButton = "🏠 Academy", ProfileButton = "👤 Profile", PhoneButton = "Phone" }) do
+		local button = oldHud:FindFirstChild(name)
+		if button then
+			button.Text = text
+		end
+	end
+end
+
 fs.writeFile(output, roblox.serializePlace(game))
 note("Išsaugota: %s", output)

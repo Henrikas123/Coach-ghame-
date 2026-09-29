@@ -280,9 +280,9 @@ function PhonePanel.create(Kit, State)
 	})
 	local statValues = {}
 	for index, def in ipairs({
-		{ key = "followers", label = "Sekėjai" },
-		{ key = "clients", label = "Klientai" },
-		{ key = "members", label = "Nariai" },
+		{ key = "followers", label = "Followers" },
+		{ key = "clients", label = "Clients" },
+		{ key = "members", label = "Members" },
 	}) do
 		local column = Kit.create("Frame", {
 			Name = "Stat_" .. def.key,
@@ -315,7 +315,7 @@ function PhonePanel.create(Kit, State)
 	local reachCaption = Kit.label({
 		parent = profileCard,
 		name = "ReachCaption",
-		text = "🚶  Iki naujo kliento",
+		text = "🚶  Next walk-in client",
 		bold = true,
 		textSize = 12,
 		color = C.textSecondary,
@@ -390,9 +390,9 @@ function PhonePanel.create(Kit, State)
 	local tabButtons = {}
 	local currentTab = "posts"
 	local TAB_DEFS = {
-		{ key = "posts", label = "Įrašai", icon = "📣" },
-		{ key = "clients", label = "Klientai", icon = "🚶" },
-		{ key = "fighters", label = "Kovotojai", icon = "🥊" },
+		{ key = "posts", label = "Posts", icon = "📣" },
+		{ key = "clients", label = "Clients", icon = "🚶" },
+		{ key = "fighters", label = "Fighters", icon = "🥊" },
 	}
 
 	local function selectTab(key)
@@ -478,7 +478,7 @@ function PhonePanel.create(Kit, State)
 	Kit.label({
 		parent = postsPage,
 		name = "ComposeCaption",
-		text = "NAUJAS ĮRAŠAS",
+		text = "NEW POST",
 		bold = true,
 		textSize = 12,
 		color = C.textSecondary,
@@ -527,7 +527,7 @@ function PhonePanel.create(Kit, State)
 		Kit.label({
 			parent = cardFrame,
 			name = "Meta",
-			text = string.format("+%d–%d sekėjų · +%d–%d pasiek.", item.followersMin, item.followersMax, item.reachMin, item.reachMax),
+			text = string.format("+%d–%d fans · +%d–%d reach", item.followersMin, item.followersMax, item.reachMin, item.reachMax),
 			textSize = 12,
 			color = C.textSecondary,
 			size = UDim2.new(1, -146, 0, 16),
@@ -536,7 +536,7 @@ function PhonePanel.create(Kit, State)
 		local postButton = Kit.button({
 			parent = cardFrame,
 			name = "PostButton",
-			text = "Skelbti",
+			text = "Post",
 			variant = "gold",
 			size = UDim2.new(0, 76, 0, 30),
 			position = UDim2.new(1, -12, 0.5, 0),
@@ -577,7 +577,7 @@ function PhonePanel.create(Kit, State)
 	local feedCaption = Kit.label({
 		parent = postsPage,
 		name = "FeedCaption",
-		text = "VEIKLA",
+		text = "ACTIVITY",
 		bold = true,
 		textSize = 12,
 		color = C.textSecondary,
@@ -597,7 +597,7 @@ function PhonePanel.create(Kit, State)
 			local item = entry.item
 			if item.locked then
 				entry.button.SetEnabled(false)
-				entry.button.SetText("Netrukus")
+				entry.button.SetText("Soon")
 				entry.icon.TextTransparency = 0.5
 				entry.track.Visible = false
 				entry.title.TextColor3 = C.textSecondary
@@ -613,7 +613,7 @@ function PhonePanel.create(Kit, State)
 					entry.stroke.Color = C.border
 				else
 					entry.button.SetEnabled(true)
-					entry.button.SetText("Skelbti")
+					entry.button.SetText("Post")
 					entry.track.Visible = false
 					entry.stroke.Color = C.gold
 				end
@@ -632,7 +632,7 @@ function PhonePanel.create(Kit, State)
 			local empty = Kit.label({
 				parent = postsPage,
 				name = "FeedEmpty",
-				text = "Dar nieko nepaskelbei. Pirmas įrašas pritrauks sekėjų — o sekėjai atveda klientus.",
+				text = "Nothing posted yet. Your first post brings followers — and followers bring clients.",
 				textSize = 12,
 				color = C.textSecondary,
 				wrap = true,
@@ -674,7 +674,7 @@ function PhonePanel.create(Kit, State)
 			Kit.label({
 				parent = row,
 				name = "Title",
-				text = isWalkIn and ("Naujas klientas: " .. (entry.title or "?")) or (entry.title or "Įrašas"),
+				text = isWalkIn and ("New client: " .. (entry.title or "?")) or (entry.title or "Post"),
 				bold = true,
 				textSize = 12,
 				color = isWalkIn and C.goldBright or C.textPrimary,
@@ -743,7 +743,7 @@ function PhonePanel.create(Kit, State)
 			parent = intro,
 			name = "Text",
 			text = string.format(
-				"Klientai ateina patys, kai įrašų pasiekiamumas sukaupia ribą. Po %d nemokamų treniruočių patenkinti (≥ %d%%) tampa nariais.",
+				"Clients walk in when your posts' reach hits the goal. After %d free sessions, happy clients (≥ %d%%) become members.",
 				TrainingConfig.Trial.maxSessions, TrainingConfig.Trial.convertThreshold
 			),
 			textSize = 12,
@@ -757,7 +757,7 @@ function PhonePanel.create(Kit, State)
 		local caption = Kit.label({
 			parent = clientsPage,
 			name = "Caption",
-			text = string.format("BANDOMIEJI  •  %d", #trials),
+			text = string.format("ON TRIAL  •  %d", #trials),
 			bold = true,
 			textSize = 12,
 			color = C.textSecondary,
@@ -771,8 +771,8 @@ function PhonePanel.create(Kit, State)
 			local empty = Kit.emptyState({
 				parent = clientsPage,
 				icon = "🚪",
-				title = "Kol kas tuščia",
-				text = "Skelbk įrašus — augantis pasiekiamumas atves naujų klientų.",
+				title = "Nobody here yet",
+				text = "Keep posting — growing reach brings in new clients.",
 				size = UDim2.new(1, 0, 0, 150),
 				order = 3,
 			})
@@ -809,7 +809,7 @@ function PhonePanel.create(Kit, State)
 			Kit.label({
 				parent = row,
 				name = "Sessions",
-				text = string.format("Treniruotės %d/%d", sessions, TrainingConfig.Trial.maxSessions),
+				text = string.format("Sessions %d/%d", sessions, TrainingConfig.Trial.maxSessions),
 				textSize = 12,
 				color = C.textSecondary,
 				size = UDim2.new(1, -120, 0, 14),
@@ -849,7 +849,7 @@ function PhonePanel.create(Kit, State)
 		local membersNote = Kit.label({
 			parent = clientsPage,
 			name = "MembersNote",
-			text = string.format("Nuolatinių narių akademijoje: %d", members),
+			text = string.format("Full members at the academy: %d", members),
 			textSize = 12,
 			color = C.textSecondary,
 			align = Enum.TextXAlignment.Center,
@@ -886,8 +886,8 @@ function PhonePanel.create(Kit, State)
 			local empty = Kit.emptyState({
 				parent = fightersPage,
 				icon = "🥊",
-				title = "Dar nėra kovotojų",
-				text = "Kai bandomieji klientai taps nariais, jie susikurs savo paskyras.",
+				title = "No fighters yet",
+				text = "When trial clients become members, they'll set up their own accounts.",
 				size = UDim2.new(1, 0, 0, 160),
 				order = 1,
 			})
@@ -950,7 +950,7 @@ function PhonePanel.create(Kit, State)
 			Kit.label({
 				parent = row,
 				name = "FansCaption",
-				text = "fanų",
+				text = "fans",
 				textSize = 12,
 				color = C.textSecondary,
 				align = Enum.TextXAlignment.Right,
@@ -961,15 +961,15 @@ function PhonePanel.create(Kit, State)
 
 			local status
 			if student.injured then
-				status = "🩹 Atsigauna po traumos. Grįšiu stipresnis!"
+				status = "🩹 Recovering from injury. I'll come back stronger!"
 			elseif (student.tournamentWins or 0) > 0 then
-				status = string.format("🏆 %d× turnyro čempionas. Kitas tikslas — dar vienas diržas.", student.tournamentWins)
+				status = string.format("🏆 %d× tournament champion. Next goal — another belt.", student.tournamentWins)
 			elseif (record.wins or 0) > 0 then
-				status = string.format("🥊 Rekordas %d-%d. %s lygis — einam toliau!", record.wins or 0, record.losses or 0, Kit.translate("ladder", tier and tier.name))
+				status = string.format("🥊 Record %d-%d. %s level — let's keep going!", record.wins or 0, record.losses or 0, Kit.translate("ladder", tier and tier.name))
 			elseif student.competitionReady then
-				status = "⚔️ Pasiruošęs pirmai kovai. Laukiu varžovo!"
+				status = "⚔️ Ready for my first fight. Bring on an opponent!"
 			else
-				status = "💪 Treniruotės kiekvieną dieną. Kelias į ringą prasidėjo."
+				status = "💪 Training every day. The road to the ring has started."
 			end
 			local bubble = Kit.create("Frame", {
 				Name = "PostBubble",
@@ -1007,7 +1007,7 @@ function PhonePanel.create(Kit, State)
 		profileName.Text = academy.academyName or AcademyConfig.DefaultName
 		if compactPhone then
 			profileHandle.Text = string.format(
-				"%s sekėjų  •  %d/%d pasiek.",
+				"%s followers  •  %d/%d reach",
 				Kit.formatNumber(marketing.followers or 0), marketing.reachAccumulated or 0, marketing.walkInThreshold or 80
 			)
 		else
@@ -1028,9 +1028,9 @@ function PhonePanel.create(Kit, State)
 
 		local reach = marketing.reachAccumulated or 0
 		local threshold = math.max(1, marketing.walkInThreshold or 80)
-		reachValue.Text = string.format("%d / %d pasiek.", reach, threshold)
+		reachValue.Text = string.format("%d / %d reach", reach, threshold)
 		reachBar.Set(reach / threshold)
-		reachCaption.Text = string.format("🚶  Iki naujo kliento: %d", math.max(0, threshold - reach))
+		reachCaption.Text = string.format("🚶  Next walk-in: %d", math.max(0, threshold - reach))
 	end
 
 	local function renderAll()
@@ -1069,13 +1069,13 @@ function PhonePanel.create(Kit, State)
 
 	-- Serverio zinute perrasome zaidejui aiskesne forma (lietuviski terminai, klientas atskiroje eiluteje)
 	local function friendlyMarketingMessage(message)
-		local label, followers, reach = string.match(message, "^(.-) paskelbtas! %+(%d+) sek.-, %+(%d+) reach")
+		local label, followers, reach = string.match(message, "^(.-) posted! %+(%d+) followers, %+(%d+) reach")
 		if not label then
 			return message
 		end
-		local text = string.format("„%s“ paskelbta: +%s sekėjų · +%s pasiek.", label, followers, reach)
-		for name in string.gmatch(message, "Naujas klientas atėjo: ([^!]+)!") do
-			text ..= "\n🚶 Naujas klientas: " .. name
+		local text = string.format("“%s” posted: +%s followers · +%s reach", label, followers, reach)
+		for name in string.gmatch(message, "New client walked in: ([^!]+)!") do
+			text ..= "\n🚶 New client: " .. name
 		end
 		return text
 	end

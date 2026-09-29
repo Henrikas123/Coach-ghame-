@@ -31,8 +31,8 @@ function ScoutPanel.create(Kit, State)
 
 	local panel = Kit.createPanel({
 		key = "Scout",
-		title = "Skautai",
-		subtitle = "Talentų paieška ir varžovų žvalgyba",
+		title = "Scouting",
+		subtitle = "Find new talent and study your rivals",
 		icon = "🔎",
 		accent = "steel",
 		maxSize = Vector2.new(760, 560),
@@ -42,8 +42,8 @@ function ScoutPanel.create(Kit, State)
 	local tabs = Kit.tabs({
 		parent = panel.Body,
 		items = {
-			{ key = "talent", label = "Talentai", icon = "🔭" },
-			{ key = "rivals", label = "Varžovai", icon = "🥊" },
+			{ key = "talent", label = "Talent", icon = "🔭" },
+			{ key = "rivals", label = "Rivals", icon = "🥊" },
 		},
 		size = UDim2.new(1, -40, 0, 42),
 		position = UDim2.new(0, 20, 0, 14),
@@ -106,7 +106,7 @@ function ScoutPanel.create(Kit, State)
 	Kit.label({
 		parent = searchCard,
 		name = "Title",
-		text = "Siųsk skautą ieškoti talentų",
+		text = "Send your scout to find talent",
 		bold = true,
 		textSize = 16,
 		size = UDim2.new(1, -310, 0, 20),
@@ -127,7 +127,7 @@ function ScoutPanel.create(Kit, State)
 	local searchButton = Kit.button({
 		parent = searchCard,
 		name = "SearchButton",
-		text = "Siųsti skautą",
+		text = "Send scout",
 		icon = "🔭",
 		variant = "steel",
 		size = UDim2.new(0, 196, 0, 40),
@@ -160,7 +160,7 @@ function ScoutPanel.create(Kit, State)
 		color2 = C.steelBright,
 	})
 
-	local _, candidatesHint = Kit.sectionHeader({ parent = talentPage, title = "Kandidatai", hint = "", order = 2, accent = C.steelBright })
+	local _, candidatesHint = Kit.sectionHeader({ parent = talentPage, title = "Prospects", hint = "", order = 2, accent = C.steelBright })
 
 	local candidateRows = {}
 
@@ -173,14 +173,14 @@ function ScoutPanel.create(Kit, State)
 		local s = State.get()
 		local candidates = s.scout.candidates or {}
 		local money = s.money or 0
-		candidatesHint.Text = #candidates > 0 and string.format("Rasta: %d", #candidates) or ""
+		candidatesHint.Text = #candidates > 0 and string.format("Found: %d", #candidates) or ""
 
 		if #candidates == 0 then
 			table.insert(candidateRows, Kit.emptyState({
 				parent = talentPage,
 				icon = "🧭",
-				title = "Kandidatų dar nėra",
-				text = "Siųsk skautą — jis atves 3 talentus su jau žinomu potencialu (skirtingai nei atsitiktiniai klientai).",
+				title = "No prospects yet",
+				text = "Send your scout — they bring back 3 talents with known potential (unlike random walk-ins).",
 				size = UDim2.new(1, 0, 0, 160),
 				order = 3,
 			}))
@@ -217,7 +217,7 @@ function ScoutPanel.create(Kit, State)
 			Kit.label({
 				parent = cardFrame,
 				name = "Personality",
-				text = "Asmenybė: " .. Kit.translate("personality", candidate.personality),
+				text = "Personality: " .. Kit.translate("personality", candidate.personality),
 				textSize = 12,
 				color = C.textSecondary,
 				size = UDim2.new(1, -330, 0, 16),
@@ -226,7 +226,7 @@ function ScoutPanel.create(Kit, State)
 			Kit.potentialBadge({
 				parent = cardFrame,
 				potential = candidate.potencialas,
-				suffix = " potencialas",
+				suffix = " potential",
 				position = UDim2.new(0, 82, 0, 62),
 			})
 
@@ -235,7 +235,7 @@ function ScoutPanel.create(Kit, State)
 			Kit.button({
 				parent = cardFrame,
 				name = "RecruitButton",
-				text = money >= cost and ("Samdyti  •  " .. Kit.formatMoney(cost)) or ("Trūksta " .. Kit.formatMoney(cost - money)),
+				text = money >= cost and ("Sign  •  " .. Kit.formatMoney(cost)) or ("Need " .. Kit.formatMoney(cost - money)),
 				variant = "gold",
 				size = UDim2.new(0, 180, 0, 36),
 				position = UDim2.new(1, -16, 0, 16),
@@ -251,7 +251,7 @@ function ScoutPanel.create(Kit, State)
 				Kit.label({
 					parent = cardFrame,
 					name = "ReportOwned",
-					text = "✓ Ataskaita",
+					text = "✓ Report",
 					bold = true,
 					textSize = 13,
 					color = C.goldBright,
@@ -264,7 +264,7 @@ function ScoutPanel.create(Kit, State)
 				Kit.button({
 					parent = cardFrame,
 					name = "ReportButton",
-					text = money >= reportCost and ("Skauto ataskaita  •  " .. Kit.formatMoney(reportCost)) or ("Ataskaitai trūksta " .. Kit.formatMoney(reportCost - money)),
+					text = money >= reportCost and ("Scout report  •  " .. Kit.formatMoney(reportCost)) or ("Report: need " .. Kit.formatMoney(reportCost - money)),
 					variant = "ghost",
 					size = UDim2.new(0, 180, 0, 32),
 					position = UDim2.new(1, -16, 0, 58),
@@ -292,7 +292,7 @@ function ScoutPanel.create(Kit, State)
 				Kit.label({
 					parent = capsBox,
 					name = "Caption",
-					text = "GENETINĖS LUBOS",
+					text = "POTENTIAL CEILING",
 					bold = true,
 					textSize = 12,
 					color = C.textSecondary,
@@ -301,7 +301,7 @@ function ScoutPanel.create(Kit, State)
 				Kit.label({
 					parent = capsBox,
 					name = "Hint",
-					text = "maks. statistika",
+					text = "max stats",
 					textSize = 12,
 					color = C.textSecondary,
 					align = Enum.TextXAlignment.Right,
@@ -358,7 +358,7 @@ function ScoutPanel.create(Kit, State)
 				Kit.label({
 					parent = capsBox,
 					name = "Locked",
-					text = "🔒  Genetinės lubos paslėptos — skauto ataskaita parodys, kiek kiekviena statistika gali užaugti.",
+					text = "🔒  Potential ceiling hidden — a scout report shows how far each stat can grow.",
 					textSize = 12,
 					color = C.textSecondary,
 					size = UDim2.new(1, -24, 1, 0),
@@ -379,30 +379,30 @@ function ScoutPanel.create(Kit, State)
 		local cooldown = math.floor(ScoutConfig.ScoutCooldown * cooldownMultiplier + 0.5)
 		local money = s.money or 0
 
-		local subText = string.format("Rasi %d kandidatus su atskleistu potencialu.", ScoutConfig.CandidateCount)
+		local subText = string.format("Finds %d prospects with revealed potential.", ScoutConfig.CandidateCount)
 		if costMultiplier < 1 or cooldownMultiplier < 1 then
-			subText ..= string.format(" <font color=\"#608EBC\">Skauto nuolaida: -%d%% kaina.</font>", math.floor((1 - costMultiplier) * 100 + 0.5))
+			subText ..= string.format(" <font color=\"#608EBC\">Talent Scout discount: -%d%% cost.</font>", math.floor((1 - costMultiplier) * 100 + 0.5))
 		else
-			subText ..= " Pasamdyk Skautą (Personalas) — paieška bus pigesnė."
+			subText ..= " Hire a Talent Scout (Staff) to make searches cheaper."
 		end
 		searchSub.Text = subText
 
 		local remaining = (s.scout.lastScoutAt or 0) + cooldown - State.now()
 		if remaining > 0 then
 			searchButton.SetEnabled(false)
-			searchButton.SetText("Skautas ilsisi")
-			cooldownCaption.Text = "Grįš po " .. Kit.formatDuration(remaining)
+			searchButton.SetText("Scout is resting")
+			cooldownCaption.Text = "Back in " .. Kit.formatDuration(remaining)
 			cooldownBar.Instance.Visible = true
 			cooldownBar.Set(1 - remaining / math.max(1, cooldown), true)
 		else
 			cooldownBar.Instance.Visible = false
-			cooldownCaption.Text = "Skautas pasiruošęs"
+			cooldownCaption.Text = "Scout is ready"
 			if money >= cost then
 				searchButton.SetEnabled(true)
-				searchButton.SetText("Siųsti skautą  •  " .. Kit.formatMoney(cost))
+				searchButton.SetText("Send scout  •  " .. Kit.formatMoney(cost))
 			else
 				searchButton.SetEnabled(false)
-				searchButton.SetText("Trūksta " .. Kit.formatMoney(cost - money))
+				searchButton.SetText("Need " .. Kit.formatMoney(cost - money))
 			end
 		end
 	end
@@ -414,7 +414,7 @@ function ScoutPanel.create(Kit, State)
 	Kit.label({
 		parent = rivalsPage,
 		name = "Intro",
-		text = "Kiekviename karjeros lygyje varžovų statistika atsitiktinė, bet ribota. Palygink su savo kovotojais prieš kovą.",
+		text = "Opponent stats are random but capped at each career level. Compare them with your fighters before a fight.",
 		textSize = 12,
 		color = C.textSecondary,
 		wrap = true,
@@ -457,8 +457,8 @@ function ScoutPanel.create(Kit, State)
 			size = UDim2.new(0.5, -80, 0, 20),
 			position = UDim2.new(0, 78, 0, 16),
 		})
-		local promoteText = tier.winsToPromote == math.huge and "Aukščiausias lygis"
-			or ("Iki kito lygio: " .. Kit.plural(tier.winsToPromote, "pergalė", "pergalės", "pergalių"))
+		local promoteText = tier.winsToPromote == math.huge and "Top level"
+			or ("Next level: " .. Kit.plural(tier.winsToPromote, "win", "wins"))
 		Kit.label({
 			parent = cardFrame,
 			name = "Promote",
@@ -481,7 +481,7 @@ function ScoutPanel.create(Kit, State)
 		Kit.label({
 			parent = cardFrame,
 			name = "Payout",
-			text = string.format("Pergalė <font color=\"#ECC85C\">+$%d</font>  •  Pralaim. +$%d  •  Rep. +%d", tier.payoutWin, tier.payoutLoss, tier.reputationWin),
+			text = string.format("Win <font color=\"#ECC85C\">+$%d</font>  •  Loss +$%d  •  Rep +%d", tier.payoutWin, tier.payoutLoss, tier.reputationWin),
 			rich = true,
 			textSize = 12,
 			color = C.textSecondary,
@@ -499,7 +499,7 @@ function ScoutPanel.create(Kit, State)
 		Kit.label({
 			parent = rangeBox,
 			name = "Caption",
-			text = "VARŽOVŲ STATISTIKA",
+			text = "OPPONENT STATS",
 			bold = true,
 			textSize = 12,
 			color = C.textSecondary,
@@ -575,8 +575,8 @@ function ScoutPanel.create(Kit, State)
 	Kit.list(wheelCard, 8)
 	Kit.sectionHeader({
 		parent = wheelCard,
-		title = "Stilių ratas",
-		hint = string.format("Pranašumas: +%d%%  •  Silpnybė: -%d%%",
+		title = "Style Wheel",
+		hint = string.format("Edge: +%d%%  •  Weakness: -%d%%",
 			math.floor((FightConfig.StyleAdvantageMultiplier - 1) * 100 + 0.5),
 			math.floor((1 - FightConfig.StyleDisadvantageMultiplier) * 100 + 0.5)),
 		order = 0,
@@ -597,7 +597,7 @@ function ScoutPanel.create(Kit, State)
 			Kit.label({
 				parent = row,
 				name = "Text",
-				text = string.format("<b>%s</b>   <font color=\"#ECC85C\">➜ stiprus prieš</font>   %s", styleId, victim),
+				text = string.format("<b>%s</b>   <font color=\"#ECC85C\">➜ beats</font>   %s", styleId, victim),
 				rich = true,
 				textSize = 12,
 				size = UDim2.new(1, -24, 1, 0),
@@ -609,7 +609,7 @@ function ScoutPanel.create(Kit, State)
 	Kit.label({
 		parent = wheelCard,
 		name = "Balanced",
-		text = "Balanced — neutralus: neturi nei pranašumo, nei silpnybės.",
+		text = "Balanced — neutral: no edge and no weakness.",
 		textSize = 12,
 		color = C.textSecondary,
 		size = UDim2.new(1, 0, 0, 16),
@@ -637,11 +637,11 @@ function ScoutPanel.create(Kit, State)
 			if best then
 				local hex = best.ovr >= tier.opponentStatMax and "#608EBC"
 					or (best.ovr >= tier.opponentStatMin and "#ECC85C" or "#D63E4C")
-				row.best.Text = string.format("Tavo geriausias: <font color=\"%s\"><b>OVR %d</b></font>  •  %s", hex, best.ovr, Kit.displayName(best.name))
+				row.best.Text = string.format("Your best: <font color=\"%s\"><b>OVR %d</b></font>  •  %s", hex, best.ovr, Kit.displayName(best.name))
 				row.marker.Position = UDim2.new(math.clamp(best.ovr / 100, 0, 1), 0, 0.5, 0)
 				row.marker.Visible = true
 			else
-				row.best.Text = "Šiame lygyje kovotojų nėra"
+				row.best.Text = "No fighters at this level"
 				row.marker.Visible = false
 			end
 		end

@@ -221,24 +221,24 @@ local function parseMarketingMessage(message)
 		return false
 	end
 	local added = false
-	local postLabel, followersGain, reachGain = string.match(message, "^(.-) paskelbtas! %+(%d+) sek.-, %+(%d+) reach")
+	local postLabel, followersGain, reachGain = string.match(message, "^(.-) posted! %+(%d+) followers, %+(%d+) reach")
 	if postLabel then
 		local itemId = marketingItemByLabel(postLabel)
 		addFeed({
 			kind = "post",
 			itemId = itemId,
 			title = postLabel,
-			text = string.format("+%s sekėjų  •  +%s pasiek.", followersGain, reachGain),
+			text = string.format("+%s followers  •  +%s reach", followersGain, reachGain),
 			followers = tonumber(followersGain),
 			reach = tonumber(reachGain),
 		})
 		added = true
 	end
-	for name in string.gmatch(message, "Naujas klientas atėjo: ([^!]+)!") do
+	for name in string.gmatch(message, "New client walked in: ([^!]+)!") do
 		addFeed({
 			kind = "walkin",
 			title = name,
-			text = "Atėjo į nemokamą bandomąją treniruotę",
+			text = "Came in for a free trial session",
 		})
 		added = true
 	end
@@ -258,7 +258,7 @@ local function seedFeedFromPostTimes()
 				kind = "post",
 				itemId = itemId,
 				title = item.label,
-				text = string.format("+%d–%d sekėjų  •  +%d–%d pasiek.", item.followersMin, item.followersMax, item.reachMin, item.reachMax),
+				text = string.format("+%d–%d followers  •  +%d–%d reach", item.followersMin, item.followersMax, item.reachMin, item.reachMax),
 				time = postedAt,
 			})
 		end
@@ -445,7 +445,7 @@ function ClientState.start()
 		if feedChanged then
 			notify("feed")
 			-- naujas walk-in klientas -> atnaujinam nariu sarasa
-			if string.find(data.message or "", "Naujas klientas", 1, true) then
+			if string.find(data.message or "", "New client walked in", 1, true) then
 				ClientState.refresh(true)
 			end
 		end

@@ -115,41 +115,41 @@ TournamentEnterRequest.OnServerEvent:Connect(function(player, studentIndex, tour
 
 	local tournament = TournamentConfig.Tournaments[tournamentIndex]
 	if not tournament then
-		pushUpdate(player, { phase = "error", message = "Neteisingas turnyras." })
+		pushUpdate(player, { phase = "error", message = "Invalid tournament." })
 		return
 	end
 
 	local student = profile.studentsList and profile.studentsList[studentIndex]
 	if not student then
-		pushUpdate(player, { phase = "error", message = "Neteisingas mokinys." })
+		pushUpdate(player, { phase = "error", message = "Invalid fighter." })
 		return
 	end
 
 	if student.injured then
-		pushUpdate(player, { phase = "error", message = "Sis mokinys susizeides ir negali dalyvauti turnyre." })
+		pushUpdate(player, { phase = "error", message = "This fighter is injured and can't enter the tournament." })
 		return
 	end
 
 	local stars = currentStars(profile)
 	if stars < (tournament.minStars or 1) then
-		pushUpdate(player, { phase = "error", message = "Reikia daugiau reputacijos zvaigdziu siam turnyrui." })
+		pushUpdate(player, { phase = "error", message = "You need more reputation stars for this tournament." })
 		return
 	end
 
 	local now = os.time()
 	local lastAt = profile.lastTournamentAt or 0
 	if now - lastAt < (TournamentConfig.EntryCooldown or 0) then
-		pushUpdate(player, { phase = "error", message = "Palauk pries dalyvaudamas kitame turnyre." })
+		pushUpdate(player, { phase = "error", message = "Wait a moment before entering another tournament." })
 		return
 	end
 
 	if (profile.pinigai or 0) < (tournament.entryFee or 0) then
-		pushUpdate(player, { phase = "error", message = "Nepakanka pinigu dalyvio mokesciui." })
+		pushUpdate(player, { phase = "error", message = "Not enough money for the entry fee." })
 		return
 	end
 
 	if not fightSim then
-		pushUpdate(player, { phase = "error", message = "Turnyru sistema dar kraunasi, bandykite veliau." })
+		pushUpdate(player, { phase = "error", message = "Tournaments are still loading, try again shortly." })
 		return
 	end
 
@@ -210,11 +210,11 @@ TournamentEnterRequest.OnServerEvent:Connect(function(player, studentIndex, tour
 
 	local message
 	if champion then
-		message = string.format("%s tapo %s čempionu! (+$%d, +%d reputacijos)", student.name, tournament.name, rewardMoney, rewardReputation)
+		message = string.format("%s is the %s champion! (+$%d, +%d reputation)", student.name, tournament.name, rewardMoney, rewardReputation)
 	elseif roundsWon > 0 then
-		message = string.format("%s iskrito is %s po %d pergale(-iu). (+$%d, +%d reputacijos)", student.name, tournament.name, roundsWon, rewardMoney, rewardReputation)
+		message = string.format("%s was knocked out of %s after %d win(s). (+$%d, +%d reputation)", student.name, tournament.name, roundsWon, rewardMoney, rewardReputation)
 	else
-		message = string.format("%s pralaimejo pirmame %s ture.", student.name, tournament.name)
+		message = string.format("%s lost in the first round of %s.", student.name, tournament.name)
 	end
 
 	activeTournament[player] = false

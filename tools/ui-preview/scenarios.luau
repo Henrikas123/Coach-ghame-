@@ -58,7 +58,7 @@ local function richSeed(profile, now)
 	profile.lastSponsorRefresh = now - 200
 	profile.scoutCandidates = {}
 	profile.lastScoutAt = now - 100
-	profile.trophies = { ["Miesto Taure"] = 2, ["Regiono Cempionatas"] = 1 }
+	profile.trophies = { ["City Cup"] = 2, ["Regional Championship"] = 1 }
 	profile.lifetimeEarned = 6420
 	profile.lifetimeSpent = 3970
 	profile.studentsList = {

@@ -63,8 +63,8 @@ function TournamentPanel.create(Kit, State)
 
 	local panel = Kit.createPanel({
 		key = "Tournament",
-		title = "Turnyrai",
-		subtitle = "Karjeros laiptai, varžybos ir pasiruošimas kovoms",
+		title = "Tournaments",
+		subtitle = "Career ladder, competitions and fight prep",
 		icon = "🏆",
 		accent = "crimson",
 		maxSize = Vector2.new(800, 580),
@@ -74,8 +74,8 @@ function TournamentPanel.create(Kit, State)
 	local tabs = Kit.tabs({
 		parent = panel.Body,
 		items = {
-			{ key = "tournaments", label = "Turnyrai", icon = "🏆" },
-			{ key = "career", label = "Karjeros laiptai", icon = "🪜" },
+			{ key = "tournaments", label = "Tournaments", icon = "🏆" },
+			{ key = "career", label = "Career Ladder", icon = "🪜" },
 		},
 		size = UDim2.new(1, -40, 0, 42),
 		position = UDim2.new(0, 20, 0, 14),
@@ -158,7 +158,7 @@ function TournamentPanel.create(Kit, State)
 	local backButton = Kit.button({
 		parent = tournamentsPage,
 		name = "BackButton",
-		text = "Visi turnyrai",
+		text = "All tournaments",
 		icon = "←",
 		variant = "ghost",
 		size = UDim2.new(0, 170, 0, 32),
@@ -312,7 +312,7 @@ function TournamentPanel.create(Kit, State)
 	})
 	Kit.padding(pickerCard, 14, 16, 16, 16)
 	Kit.list(pickerCard, 10)
-	Kit.sectionHeader({ parent = pickerCard, title = "Kovotojas", hint = "Tik paruošti kovoms", accent = C.crimsonBright, order = 0 })
+	Kit.sectionHeader({ parent = pickerCard, title = "Fighter", hint = "Fight-ready only", accent = C.crimsonBright, order = 0 })
 	local chipGrid = Kit.create("Frame", {
 		Name = "Chips",
 		BackgroundTransparency = 1,
@@ -334,7 +334,7 @@ function TournamentPanel.create(Kit, State)
 	})
 	Kit.padding(campCard, 14, 16, 16, 16)
 	Kit.list(campCard, 8)
-	Kit.sectionHeader({ parent = campCard, title = "Pasiruošimas kovai", accent = C.crimsonBright, order = 0 })
+	Kit.sectionHeader({ parent = campCard, title = "Fight Camp", accent = C.crimsonBright, order = 0 })
 	-- Kai nera ne vieno paruosto kovotojo: kvietimas treniruoti vietoj patikros saraso
 	local noFighterCallout = Kit.create("Frame", {
 		Name = "NoFighterCallout",
@@ -354,7 +354,7 @@ function TournamentPanel.create(Kit, State)
 		parent = noFighterCallout,
 		name = "Text",
 		text = string.format(
-			"Nėra paruoštų kovotojų — vidutinė statistika turi būti ≥ %d. Treniruok narius akademijoje.",
+			"No fight-ready fighters — average stats must be ≥ %d. Train your members at the academy.",
 			TrainingConfig.Trial.competitionReadyStatThreshold
 		),
 		textSize = 12,
@@ -366,7 +366,7 @@ function TournamentPanel.create(Kit, State)
 	Kit.button({
 		parent = noFighterCallout,
 		name = "GoTrain",
-		text = "Treniruoti akademijoje",
+		text = "Train at the academy",
 		icon = "🏋️",
 		variant = "steel",
 		size = UDim2.new(1, 0, 0, 34),
@@ -430,7 +430,7 @@ function TournamentPanel.create(Kit, State)
 	local enterButton = Kit.button({
 		parent = detailFooter,
 		name = "EnterButton",
-		text = "Registruotis",
+		text = "Enter",
 		icon = "🥊",
 		variant = "crimson",
 		size = UDim2.new(1, 0, 0, 44),
@@ -527,7 +527,7 @@ function TournamentPanel.create(Kit, State)
 			Kit.label({
 				parent = chipGrid,
 				name = "Empty",
-				text = "Dar nėra narių — bandomieji klientai turi tapti nariais.",
+				text = "No members yet — trial clients have to become members first.",
 				textSize = 12,
 				color = C.textSecondary,
 				wrap = true,
@@ -571,11 +571,11 @@ function TournamentPanel.create(Kit, State)
 			})
 			local status
 			if student.injured then
-				status = "🩹 Traumuotas"
+				status = "🩹 Injured"
 			elseif not student.competitionReady then
-				status = "Dar nepasiruošęs"
+				status = "Not ready yet"
 			elseif (student.fatigue or 0) >= TrainingConfig.FatigueTrainingBlockThreshold then
-				status = "Per daug pavargęs"
+				status = "Too tired"
 			else
 				status = string.format("OVR %d  •  %d-%d", Kit.overall(student), student.record and student.record.wins or 0, student.record and student.record.losses or 0)
 			end
@@ -623,20 +623,20 @@ function TournamentPanel.create(Kit, State)
 		end
 		local reason = nil
 		if stars < tournament.minStars then
-			reason = "Reikia " .. Kit.stars(tournament.minStars) .. " reputacijos"
+			reason = "Needs " .. Kit.stars(tournament.minStars) .. " reputation"
 		elseif not anyEligible then
-			reason = "Nėra paruoštų kovotojų"
+			reason = "No fight-ready fighters"
 		elseif not student then
-			reason = "Pasirink kovotoją"
+			reason = "Pick a fighter"
 		elseif not isEligible(student) then
-			reason = "Kovotojas negali dalyvauti"
+			reason = "Fighter can't enter"
 		elseif money < tournament.entryFee then
-			reason = "Trūksta " .. Kit.formatMoney(tournament.entryFee - money)
+			reason = "Need " .. Kit.formatMoney(tournament.entryFee - money)
 		elseif cooldownLeft > 0 then
-			reason = "Palauk " .. Kit.formatDuration(cooldownLeft)
+			reason = "Wait " .. Kit.formatDuration(cooldownLeft)
 		end
 		enterButton.SetEnabled(reason == nil)
-		enterButton.SetText(reason or ("Registruotis  •  " .. Kit.formatMoney(tournament.entryFee)))
+		enterButton.SetText(reason or ("Enter  •  " .. Kit.formatMoney(tournament.entryFee)))
 	end
 
 	local function renderCamp()
@@ -656,7 +656,7 @@ function TournamentPanel.create(Kit, State)
 			noFighterCallout.Visible = not anyEligible
 			checkRows.ready.row.Visible = anyEligible
 			if anyEligible then
-				setCheck("ready", false, "Pasirink kovotoją aukščiau", "", true)
+				setCheck("ready", false, "Pick a fighter above", "", true)
 			end
 			checkRows.health.row.Visible = false
 			checkRows.fatigue.row.Visible = false
@@ -677,17 +677,17 @@ function TournamentPanel.create(Kit, State)
 		end
 		avg /= #DataSchema.StatIds
 		setCheck("ready", student.competitionReady == true,
-			"Paruoštas kovoms",
-			student.competitionReady and "Taip" or string.format("OVR %d / %d", math.floor(avg + 0.5), TrainingConfig.Trial.competitionReadyStatThreshold))
+			"Fight-ready",
+			student.competitionReady and "Yes" or string.format("OVR %d / %d", math.floor(avg + 0.5), TrainingConfig.Trial.competitionReadyStatThreshold))
 		setCheck("health", not student.injured,
-			"Sveikata",
-			student.injured and string.format("Trauma ~%d min", math.ceil((student.injuryRecoverySeconds or 0) / 60)) or "Sveikas")
+			"Health",
+			student.injured and string.format("Injured ~%d min", math.ceil((student.injuryRecoverySeconds or 0) / 60)) or "Healthy")
 		local fatigue = student.fatigue or 0
 		local fatiguePenalty = math.clamp(fatigue / 100, 0, 0.5)
 		-- nuovargis silpnina >= 20% -> "!" (ispejimas), kitaip gerai
 		local fatigueOk = fatiguePenalty < 0.2
 		setCheck("fatigue", fatigueOk,
-			string.format("Nuovargis <font color=\"#A8A096\">(silpnina %d%%)</font>", math.floor(fatiguePenalty * 100 + 0.5)),
+			string.format("Fatigue <font color=\"#A8A096\">(weakens %d%%)</font>", math.floor(fatiguePenalty * 100 + 0.5)),
 			string.format("%d%%", fatigue), false)
 		if not fatigueOk then
 			checkRows.fatigue.icon.Text = "!"
@@ -699,14 +699,14 @@ function TournamentPanel.create(Kit, State)
 		local championChance = chance ^ tournament.rounds
 		local label, tone
 		if chance >= 0.65 then
-			label, tone = "Favoritas", C.goldBright
+			label, tone = "Favorite", C.goldBright
 		elseif chance >= 0.4 then
-			label, tone = "Lygiavertis", C.steelBright
+			label, tone = "Even", C.steelBright
 		else
-			label, tone = "Autsaideris", C.crimsonBright
+			label, tone = "Underdog", C.crimsonBright
 		end
 		setCheck("odds", chance >= 0.4,
-			string.format("Raundas ~<b>%d%%</b>  •  titulas ~<b>%d%%</b>", math.floor(chance * 100 + 0.5), math.floor(championChance * 100 + 0.5)),
+			string.format("Round ~<b>%d%%</b>  •  title ~<b>%d%%</b>", math.floor(chance * 100 + 0.5), math.floor(championChance * 100 + 0.5)),
 			label, chance >= 0.25)
 		checkRows.odds.value.TextColor3 = tone
 		oddsBar.Set(chance)
@@ -737,12 +737,12 @@ function TournamentPanel.create(Kit, State)
 			end
 		end
 		if result.champion then
-			resultTitle.Text = "🏆  " .. Kit.displayName(result.tournamentName or "Turnyras") .. " — ČEMPIONAS!"
+			resultTitle.Text = "🏆  " .. Kit.displayName(result.tournamentName or "Tournament") .. " — CHAMPION!"
 			resultTitle.TextColor3 = C.goldBright
 			resultStroke.Color = C.gold
 			resultStroke.Transparency = 0.2
 		else
-			resultTitle.Text = string.format("%s — %d/%d raundų", Kit.displayName(result.tournamentName or "Turnyras"), result.roundsWon or 0, result.totalRounds or 0)
+			resultTitle.Text = string.format("%s — %d/%d rounds", Kit.displayName(result.tournamentName or "Tournament"), result.roundsWon or 0, result.totalRounds or 0)
 			resultTitle.TextColor3 = C.textPrimary
 			resultStroke.Color = C.border
 			resultStroke.Transparency = 0.45
@@ -760,7 +760,7 @@ function TournamentPanel.create(Kit, State)
 			Kit.label({
 				parent = row,
 				name = "Text",
-				text = string.format("%d raundas  •  prieš %s", round.round or index, Kit.displayName(round.opponentName or "?")),
+				text = string.format("Round %d  •  vs %s", round.round or index, Kit.displayName(round.opponentName or "?")),
 				textSize = 12,
 				size = UDim2.new(1, -110, 1, 0),
 				position = UDim2.new(0, 12, 0, 0),
@@ -768,7 +768,7 @@ function TournamentPanel.create(Kit, State)
 			Kit.label({
 				parent = row,
 				name = "Outcome",
-				text = round.won and "✓ Pergalė" or "✕ Pralaimėta",
+				text = round.won and "✓ Win" or "✕ Loss",
 				bold = true,
 				textSize = 12,
 				color = round.won and C.goldBright or C.crimsonBright,
@@ -779,7 +779,7 @@ function TournamentPanel.create(Kit, State)
 			})
 		end
 		resultRewards.Text = string.format(
-			"Prizai: <font color=\"#ECC85C\"><b>+%s</b></font>  •  +%d reputacijos",
+			"Prizes: <font color=\"#ECC85C\"><b>+%s</b></font>  •  +%d reputation",
 			Kit.formatMoney(result.rewardMoney or 0), result.rewardReputation or 0
 		)
 	end
@@ -813,8 +813,8 @@ function TournamentPanel.create(Kit, State)
 		local locked = stars < tournament.minStars
 		headerName.Text = Kit.displayName(tournament.name)
 		headerSub.Text = string.format(
-			"%s%s  •  %d raundai  •  Varžovai: %s (%d–%d)",
-			locked and "<font color=\"#D63E4C\"><b>🔒 Reikia</b></font> " or "",
+			"%s%s  •  %d rounds  •  Opponents: %s (%d–%d)",
+			locked and "<font color=\"#D63E4C\"><b>🔒 Needs</b></font> " or "",
 			Kit.starsRich(tournament.minStars), tournament.rounds,
 			Kit.translate("ladder", tier.name), tier.opponentStatMin, tier.opponentStatMax
 		)
@@ -830,9 +830,9 @@ function TournamentPanel.create(Kit, State)
 				child:Destroy()
 			end
 		end
-		Kit.badge({ parent = rewardRow, text = "Čempionui +" .. Kit.formatMoney(tournament.championBonusMoney), color = C.gold, solid = true, order = 1 })
-		Kit.badge({ parent = rewardRow, text = "Už raundą +" .. Kit.formatMoney(tournament.rewardPerRoundWin), color = C.gold, order = 2 })
-		Kit.badge({ parent = rewardRow, text = string.format("+%d rep.", tournament.championBonusReputation), color = C.steelBright, order = 3 })
+		Kit.badge({ parent = rewardRow, text = "Champion +" .. Kit.formatMoney(tournament.championBonusMoney), color = C.gold, solid = true, order = 1 })
+		Kit.badge({ parent = rewardRow, text = "Per round +" .. Kit.formatMoney(tournament.rewardPerRoundWin), color = C.gold, order = 2 })
+		Kit.badge({ parent = rewardRow, text = string.format("+%d rep", tournament.championBonusReputation), color = C.steelBright, order = 3 })
 
 		renderChips()
 		renderCamp()
@@ -848,7 +848,7 @@ function TournamentPanel.create(Kit, State)
 		if studentIndex and selectedTournament then
 			State.fire("TournamentEnterRequest", studentIndex, selectedTournament)
 			enterButton.SetEnabled(false)
-			enterButton.SetText("Vyksta turnyras...")
+			enterButton.SetText("Tournament in progress...")
 		end
 	end)
 
@@ -889,7 +889,7 @@ function TournamentPanel.create(Kit, State)
 			parent = careerPage,
 			name = "Intro",
 			text = string.format(
-				"Kelias: %s ➜ %s ➜ %s ➜ Reitingai ➜ Pasaulio titulas. Laimėk kovas, kad kiltum aukštyn.",
+				"Path: %s ➜ %s ➜ %s ➜ Rankings ➜ World Title. Win fights to climb.",
 				Kit.translate("ladder", FightConfig.Ladder[1].name), Kit.translate("ladder", FightConfig.Ladder[2].name), Kit.translate("ladder", FightConfig.Ladder[3].name)
 			),
 			textSize = 12,
@@ -905,8 +905,8 @@ function TournamentPanel.create(Kit, State)
 			table.insert(careerRows, Kit.emptyState({
 				parent = careerPage,
 				icon = "🪜",
-				title = "Dar nėra kovotojų",
-				text = "Kai klientai taps nariais ir pasiruoš kovoms, čia matysi jų karjeros kelią.",
+				title = "No fighters yet",
+				text = "Once clients become members and get fight-ready, their careers show up here.",
 				size = UDim2.new(1, 0, 0, 160),
 				order = 1,
 			}))
@@ -944,7 +944,7 @@ function TournamentPanel.create(Kit, State)
 			Kit.label({
 				parent = cardFrame,
 				name = "Record",
-				text = string.format("%s  •  Rekordas %d-%d-%d  •  OVR %d", Kit.translate("ladder", tier.name), record.wins or 0, record.losses or 0, record.draws or 0, Kit.overall(student)),
+				text = string.format("%s  •  Record %d-%d-%d  •  OVR %d", Kit.translate("ladder", tier.name), record.wins or 0, record.losses or 0, record.draws or 0, Kit.overall(student)),
 				textSize = 12,
 				color = C.textSecondary,
 				size = UDim2.new(1, -330, 0, 16),
@@ -983,13 +983,13 @@ function TournamentPanel.create(Kit, State)
 			local progressValue
 			if not student.competitionReady then
 				local avg = Kit.overall(student)
-				progressText = string.format("Iki kovų: OVR %d / %d", avg, TrainingConfig.Trial.competitionReadyStatThreshold)
+				progressText = string.format("Fight-ready at OVR %d / %d", avg, TrainingConfig.Trial.competitionReadyStatThreshold)
 				progressValue = avg / TrainingConfig.Trial.competitionReadyStatThreshold
 			elseif nextTier then
-				progressText = string.format("%d/%d pergalių iki „%s“", student.tierWins or 0, tier.winsToPromote, Kit.translate("ladder", nextTier.name))
+				progressText = string.format("%d/%d wins to “%s”", student.tierWins or 0, tier.winsToPromote, Kit.translate("ladder", nextTier.name))
 				progressValue = (student.tierWins or 0) / tier.winsToPromote
 			else
-				progressText = string.format("WBF lygis  •  %d turnyrų titulai", student.tournamentWins or 0)
+				progressText = string.format("WBF level  •  %d tournament titles", student.tournamentWins or 0)
 				progressValue = 1
 			end
 			Kit.label({
@@ -1015,7 +1015,7 @@ function TournamentPanel.create(Kit, State)
 			Kit.label({
 				parent = cardFrame,
 				name = "OpponentRange",
-				text = string.format("Varžovo statistika %d–%d", tier.opponentStatMin, tier.opponentStatMax),
+				text = string.format("Opponent stats %d–%d", tier.opponentStatMin, tier.opponentStatMax),
 				textSize = 12,
 				color = C.textPrimary,
 				align = Enum.TextXAlignment.Right,
@@ -1028,7 +1028,7 @@ function TournamentPanel.create(Kit, State)
 			Kit.label({
 				parent = cardFrame,
 				name = "Odds",
-				text = string.format("Laimės raundą ~%d%%", math.floor(chance * 100 + 0.5)),
+				text = string.format("Round win ~%d%%", math.floor(chance * 100 + 0.5)),
 				bold = true,
 				textSize = 13,
 				color = chance >= 0.6 and C.goldBright or (chance >= 0.4 and C.textPrimary or C.crimsonBright),
@@ -1039,16 +1039,16 @@ function TournamentPanel.create(Kit, State)
 			})
 			local reason = nil
 			if not student.competitionReady then
-				reason = "Dar nepasiruošęs"
+				reason = "Not ready yet"
 			elseif student.injured then
-				reason = "🩹 Traumuotas"
+				reason = "🩹 Injured"
 			elseif (student.fatigue or 0) >= TrainingConfig.FatigueTrainingBlockThreshold then
-				reason = "Per daug pavargęs"
+				reason = "Too tired"
 			end
 			Kit.button({
 				parent = cardFrame,
 				name = "FightButton",
-				text = reason or string.format("Kovoti  •  +$%d", tier.payoutWin),
+				text = reason or string.format("Fight  •  +$%d", tier.payoutWin),
 				icon = reason and "" or "🥊",
 				variant = "crimson",
 				size = UDim2.new(0, 200, 0, 38),

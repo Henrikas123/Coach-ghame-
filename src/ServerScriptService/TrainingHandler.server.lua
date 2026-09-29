@@ -136,7 +136,7 @@ Players.PlayerAdded:Connect(function(player)
 		return
 	end
 	ensureStarterStudent(profile)
-	pushUpdate(player, profile, "Sveikas atvykęs į akademiją!")
+	pushUpdate(player, profile, "Welcome to your academy!")
 end)
 
 -- Lėtas fatigue "poilsis" ir morale drift laikui bėgant (kol žaidėjas online)
@@ -203,12 +203,12 @@ TrainingRequest.OnServerEvent:Connect(function(player, focusName, sessionTypeNam
 	local student, index = getStudent(profile, studentIndex)
 
 	if (student.fatigue or 0) >= TrainingConfig.FatigueTrainingBlockThreshold then
-		pushUpdate(player, profile, student.name .. " per daug pavargęs treniruotis -- reikia poilsio!")
+		pushUpdate(player, profile, student.name .. " is too tired to train — needs rest!")
 		return
 	end
 	-- Banga 2, #4: susižeidęs narys negali treniruotis kol nepagis (arba nueina į Poilsio kambarį)
 	if student.injured then
-		pushUpdate(player, profile, student.name .. " susižeidęs -- negali treniruotis kol nepagis (žr. Poilsio kambarys profilio lange).")
+		pushUpdate(player, profile, student.name .. " is injured and can't train until healed (see Recovery Room in the Academy).")
 		return
 	end
 
@@ -217,7 +217,7 @@ TrainingRequest.OnServerEvent:Connect(function(player, focusName, sessionTypeNam
 	-- Bandomojo laikotarpio (Trial) nariai treniruojasi nemokamai net ir pasirinkę Private sesiją
 	if sessionTypeName == "Private" and not isTrial then
 		if profile.pinigai < sessionType.cost then
-			pushUpdate(player, profile, "Nepakanka pinigų privačiai treniruotei ($" .. sessionType.cost .. ")")
+			pushUpdate(player, profile, "Not enough money for a private session ($" .. sessionType.cost .. ")")
 			return
 		end
 		profile.pinigai -= sessionType.cost
@@ -249,7 +249,7 @@ TrainingRequest.OnServerEvent:Connect(function(player, focusName, sessionTypeNam
 	student.fatigue = math.clamp((student.fatigue or 0) + fatigueGain, 0, TrainingConfig.MaxFatigue)
 
 	local msg = string.format(
-		"%s: %s +%d (dabar %d), %s +%d, Fatigue +%d%% (dabar %d%%)",
+		"%s: %s +%d (now %d), %s +%d, Fatigue +%d%% (now %d%%)",
 		student.name, focus.primary, primaryGain, stats[focus.primary],
 		focus.secondary, secondaryGain, fatigueGain, student.fatigue
 	)
@@ -260,15 +260,15 @@ TrainingRequest.OnServerEvent:Connect(function(player, focusName, sessionTypeNam
 		local overtrainingMult = hasStaffRole(profile, "MentalCoach") and (StaffConfig.Roles.MentalCoach.overtrainingPenaltyMultiplier or 1) or 1
 		local penalty = math.round(DataSchema.Morale.OvertrainingPenalty * overtrainingMult)
 		student.morale = math.clamp((student.morale or DataSchema.Morale.Default) - penalty, DataSchema.Morale.Min, DataSchema.Morale.Max)
-		msg = msg .. string.format(" | Pertreniruotas -- nuotaika -%d (dabar %d)", penalty, student.morale)
+		msg = msg .. string.format(" | Overtrained — morale -%d (now %d)", penalty, student.morale)
 	end
 
 	-- Banga 2: kai stat pasiekia paslėptą genetinę lubą, žaidėjas tai sužino organiškai per pranešimą
 	if primaryHitCap then
-		msg = msg .. string.format(" | %s %s pasiekė savo prigimtinę ribą.", student.name, focus.primary)
+		msg = msg .. string.format(" | %s reached their natural %s limit.", student.name, focus.primary)
 	end
 	if secondaryHitCap and focus.secondary ~= focus.primary then
-		msg = msg .. string.format(" | %s %s pasiekė savo prigimtinę ribą.", student.name, focus.secondary)
+		msg = msg .. string.format(" | %s reached their natural %s limit.", student.name, focus.secondary)
 	end
 
 	-- Fazė 5: bandomojo laikotarpio pažanga -- pasitenkinimas, konversija arba pasitraukimas
@@ -278,7 +278,7 @@ TrainingRequest.OnServerEvent:Connect(function(player, focusName, sessionTypeNam
 		local gain = trial.satisfactionGainPerSession * (1 + (profile.gymLevel - 1) * 0.1)
 		student.satisfactionScore = math.clamp((student.satisfactionScore or 50) + math.round(gain), 0, 100)
 		msg = msg .. string.format(
-			" | Bandomasis: %d/%d treniruotės, pasitenkinimas %d%%",
+			" | Trial: %d/%d sessions, satisfaction %d%%",
 			student.trialSessionsCompleted, trial.maxSessions, student.satisfactionScore
 		)
 
@@ -288,14 +288,14 @@ TrainingRequest.OnServerEvent:Connect(function(player, focusName, sessionTypeNam
 				profile.pinigai += trial.membershipFeeIncome
 				profile.reputacija += trial.convertReputationBonus
 				msg = msg .. string.format(
-					" | %s tapo nuolatiniu nariu! (+$%d, +%d reputacijos)",
+					" | %s became a full member! (+$%d, +%d reputation)",
 					student.name, trial.membershipFeeIncome, trial.convertReputationBonus
 				)
 			else
 				table.remove(profile.studentsList, index)
 				profile.reputacija = math.max(0, profile.reputacija - trial.leaveReputationPenalty)
 				msg = msg .. string.format(
-					" | %s liko nepatenkintas ir paliko akademiją. (-%d reputacijos)",
+					" | %s was unhappy and left the academy. (-%d reputation)",
 					student.name, trial.leaveReputationPenalty
 				)
 			end
@@ -307,7 +307,7 @@ TrainingRequest.OnServerEvent:Connect(function(player, focusName, sessionTypeNam
 		local avgStat = (stats.power + stats.speed + stats.defense + stats.stamina + stats.technique) / 5
 		if avgStat >= TrainingConfig.Trial.competitionReadyStatThreshold then
 			student.competitionReady = true
-			msg = msg .. string.format(" | %s dabar paruoštas kovoms!", student.name)
+			msg = msg .. string.format(" | %s is now ready to fight!", student.name)
 		end
 	end
 
