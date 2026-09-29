@@ -519,6 +519,14 @@ S.flow_play = {
 		assert(playerGui.Parent:GetAttribute("CoachIntro") == "playing", "intro state not playing")
 	end,
 }
+S.tournament_tape = {
+	seed = richSeed,
+	run = function(api)
+		api.open("Tournament")
+		api.click("Panel_Tournament/TournamentList/Tournament_2")
+		api.scroll("Panel_Tournament/Detail", 520)
+	end,
+}
 S.tournament_fresh = { seed = freshSeed, run = function(api) api.open("Tournament") end }
 S.flow_tournament_enter = {
 	seed = richSeed,

@@ -23,8 +23,31 @@ local GuiService = game:GetService("GuiService")
 local Workspace = game:GetService("Workspace")
 local UserInputService = game:GetService("UserInputService")
 local ContextActionService = game:GetService("ContextActionService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local PanelKit = {}
+
+-- Garsai (SoundConfig tusti slotai tiesiog praleidziami)
+local Sfx = nil
+task.spawn(function()
+	local modules = ReplicatedStorage:WaitForChild("Modules", 10)
+	local sfxModule = modules and modules:WaitForChild("Sfx", 10)
+	if sfxModule then
+		local ok, result = pcall(require, sfxModule)
+		if ok then
+			Sfx = result
+		end
+	end
+end)
+local function playSfx(name)
+	if Sfx then
+		Sfx.play(name)
+	end
+end
+PanelKit.playSfx = playSfx
+
+-- Panelių atidarymo/uždarymo signalas (HUD pažymi aktyvų mygtuką): Changed:Fire(key, isOpen)
+PanelKit.Changed = Instance.new("BindableEvent")
 
 -- ============================================================
 -- SPALVU PALETE (identiska MainHUDController)
@@ -375,6 +398,7 @@ function PanelKit.button(props)
 			return
 		end
 		lastActivated = now
+		playSfx(enabled and "Click" or "Error")
 		if enabled and props.onClick then
 			props.onClick()
 		end
@@ -517,9 +541,9 @@ function PanelKit.sectionHeader(props)
 	label({
 		parent = row,
 		name = "Title",
-		text = props.title or "",
-		bold = true,
-		textSize = props.textSize or 15,
+		text = string.upper(props.title or ""),
+		font = Enum.Font.Oswald,
+		textSize = (props.textSize or 15) + 2,
 		color = C.textPrimary,
 		size = UDim2.new(1, -12, 1, 0),
 		position = UDim2.new(0, 12, 0, 0),
@@ -991,8 +1015,8 @@ end
 function PanelKit.formatNumber(value)
 	local n = math.floor((tonumber(value) or 0) + 0.5)
 	local digits = tostring(math.abs(n))
-	local grouped = digits:reverse():gsub("(%d%d%d)", "%1 "):reverse()
-	grouped = grouped:gsub("^%s+", "")
+	local grouped = digits:reverse():gsub("(%d%d%d)", "%1,"):reverse()
+	grouped = grouped:gsub("^,", "")
 	return (n < 0 and "-" or "") .. grouped
 end
 
@@ -1116,6 +1140,76 @@ function PanelKit.potentialBadge(props)
 	})
 end
 
+-- Kolekcine kovotojo kortele: OVR skaicius retumo remelyje (Legendary auksas, Rare plienas, Common tamsus)
+local CARD_TONES = {
+	Legendary = { top = C.goldBright, bottom = Color3.fromRGB(150, 112, 32), text = C.textOnGold, stroke = C.goldBright },
+	Rare = { top = C.steelBright, bottom = Color3.fromRGB(36, 62, 96), text = C.textPrimary, stroke = C.steelBright },
+	Common = { top = C.bgCardLight, bottom = C.bg, text = C.textPrimary, stroke = C.border },
+}
+function PanelKit.ovrCard(props)
+	local tone = CARD_TONES[props.student and props.student.potencialas] or CARD_TONES.Common
+	local width, height = props.width or 44, props.height or 52
+	local cardFrame = create("Frame", {
+		Name = props.name or "OvrCard",
+		BackgroundColor3 = Color3.new(1, 1, 1),
+		Size = UDim2.new(0, width, 0, height),
+		Position = props.position or UDim2.new(),
+		AnchorPoint = props.anchor or Vector2.new(0, 0),
+		Parent = props.parent,
+	})
+	corner(cardFrame, 9)
+	stroke(cardFrame, tone.stroke, 1.5, 0.15)
+	create("UIGradient", {
+		Color = ColorSequence.new(tone.top, tone.bottom),
+		Rotation = 90,
+		Parent = cardFrame,
+	})
+	-- blizgesys (kortele "blizga" istrizai)
+	local gloss = create("Frame", {
+		Name = "Gloss",
+		BackgroundColor3 = Color3.new(1, 1, 1),
+		BackgroundTransparency = 0,
+		Size = UDim2.fromScale(1, 1),
+		Parent = cardFrame,
+	})
+	corner(gloss, 9)
+	create("UIGradient", {
+		Rotation = 35,
+		Transparency = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 1),
+			NumberSequenceKeypoint.new(0.35, 1),
+			NumberSequenceKeypoint.new(0.45, 0.82),
+			NumberSequenceKeypoint.new(0.55, 1),
+			NumberSequenceKeypoint.new(1, 1),
+		}),
+		Parent = gloss,
+	})
+	label({
+		parent = cardFrame,
+		name = "Caption",
+		text = "OVR",
+		font = Enum.Font.Oswald,
+		textSize = 11,
+		color = tone.text,
+		transparency = 0.2,
+		align = Enum.TextXAlignment.Center,
+		size = UDim2.new(1, 0, 0, 12),
+		position = UDim2.new(0, 0, 0, 5),
+	})
+	label({
+		parent = cardFrame,
+		name = "Value",
+		text = tostring(PanelKit.overall(props.student)),
+		font = Enum.Font.GothamBlack,
+		textSize = 20,
+		color = tone.text,
+		align = Enum.TextXAlignment.Center,
+		size = UDim2.new(1, 0, 0, 24),
+		position = UDim2.new(0, 0, 0, 19),
+	})
+	return cardFrame
+end
+
 -- Small typography fixes for server messages before they are shown in a toast
 local MESSAGE_FIXES = {
 	{ " %-%- ", " — " },
@@ -1171,9 +1265,9 @@ local HUD_GUI_NAME = "MainHUD_Premium"
 -- HUD geometrija (is MainHUDController) -- kad paneles jos neuzdengtu
 local HUD = {
 	margin = 16,
-	statusWidth = 250,
-	statusHeight = 76,
-	dockHeight = 64,
+	statusWidth = 268,
+	statusHeight = 80,
+	dockHeight = 84, -- dokas 64 + ringo virves/kampai virs jo
 	fabSize = 60,
 	fabMargin = 20,
 	gap = 12,
@@ -1496,11 +1590,11 @@ function PanelKit.createPanel(def)
 		titleLabel = label({
 			parent = header,
 			name = "Title",
-			text = def.title or "",
-			bold = true,
-			textSize = 22,
-			size = UDim2.new(1, -200, 0, 26),
-			position = UDim2.new(0, 80, 0, 16),
+			text = string.upper(def.title or ""),
+			font = Enum.Font.Oswald,
+			textSize = 26,
+			size = UDim2.new(1, -200, 0, 28),
+			position = UDim2.new(0, 80, 0, 13),
 		})
 		subtitleLabel = label({
 			parent = header,
@@ -1559,8 +1653,8 @@ function PanelKit.createPanel(def)
 		iconBadge.Size = compact and UDim2.new(0, 36, 0, 36) or UDim2.new(0, 46, 0, 46)
 		iconBadge.Position = compact and UDim2.new(0, 16, 0, 10) or UDim2.new(0, 20, 0, 15)
 		iconGlyph.TextSize = compact and 18 or 22
-		titleLabel.TextSize = compact and 18 or 22
-		titleLabel.Position = compact and UDim2.new(0, 62, 0, 15) or UDim2.new(0, 80, 0, 16)
+		titleLabel.TextSize = compact and 21 or 26
+		titleLabel.Position = compact and UDim2.new(0, 62, 0, 14) or UDim2.new(0, 80, 0, 13)
 		titleLabel.Size = compact and UDim2.new(1, -180, 0, 26) or UDim2.new(1, -200, 0, 26)
 		subtitleLabel.Visible = not compact
 		closeButton.Size = compact and UDim2.new(0, 32, 0, 32) or UDim2.new(0, 38, 0, 38)
@@ -1677,6 +1771,9 @@ function PanelKit.createPanel(def)
 		end
 		text = PanelKit.localizeMessage(text)
 		kind = kind or PanelKit.classifyMessage(text)
+		if kind == "error" then
+			playSfx("Error")
+		end
 		local tone = TOAST_TONES[kind] or TOAST_TONES.success
 		toastStroke.Color = tone.color
 		toastIcon.BackgroundColor3 = tone.color
@@ -1715,7 +1812,7 @@ function PanelKit.createPanel(def)
 
 	function panel.SetTitle(text)
 		if titleLabel then
-			titleLabel.Text = text
+			titleLabel.Text = string.upper(text or "")
 		end
 	end
 	function panel.SetSubtitle(text)
@@ -1781,7 +1878,7 @@ function PanelKit.createPanel(def)
 		local restPosition = holder.Position
 		local fromOffset = style == "phone" and 28 or 14
 		holder.Position = restPosition + UDim2.new(0, 0, 0, fromOffset)
-		holderScale.Scale = layout.scale * (style == "phone" and 0.9 or 0.95)
+		holderScale.Scale = layout.scale * (style == "phone" and 0.88 or 0.9) -- "smugio" efektas: atsoka per Back
 		fadeOverlay.BackgroundTransparency = 0
 		fadeOverlay.Visible = true
 		for _, layer in ipairs(shadowLayers) do
@@ -1789,7 +1886,8 @@ function PanelKit.createPanel(def)
 		end
 
 		tween(holder, 0.32, { Position = restPosition }, Enum.EasingStyle.Quint)
-		tween(holderScale, 0.3, { Scale = layout.scale }, Enum.EasingStyle.Back)
+		tween(holderScale, 0.34, { Scale = layout.scale }, Enum.EasingStyle.Back)
+		playSfx("PanelOpen")
 		tween(fadeOverlay, 0.24, { BackgroundTransparency = 1 })
 		task.delay(0.25, function()
 			if panel._token == token then
@@ -1939,6 +2037,7 @@ function PanelKit.open(key)
 		bindCloseAction(true)
 	end
 	panel._show(layout)
+	PanelKit.Changed:Fire(key, true)
 end
 
 function PanelKit.close(key)
@@ -1954,6 +2053,7 @@ function PanelKit.close(key)
 		bindCloseAction(false)
 		restoreHudOrder()
 	end
+	PanelKit.Changed:Fire(key, false)
 end
 
 -- Uzdaro visas atidarytas paneles (pvz. pries atidarant sena UI langa)

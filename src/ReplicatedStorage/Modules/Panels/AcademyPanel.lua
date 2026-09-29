@@ -194,7 +194,7 @@ function AcademyPanel.create(Kit, State)
 		text = "",
 		textSize = 12,
 		color = C.textSecondary,
-		size = UDim2.new(1, -(90 + 100), 0, 18),
+		size = UDim2.new(1, -(90 + 84), 0, 18),
 		position = UDim2.new(0, 90, 0, 42),
 	})
 	local badgeRow = Kit.create("Frame", {
@@ -543,8 +543,8 @@ function AcademyPanel.create(Kit, State)
 			textSize = 12,
 			color = C.textSecondary,
 			align = Enum.TextXAlignment.Center,
-			size = UDim2.new(1, -8, 1, 0),
-			position = UDim2.new(0, 4, 0, 0),
+			size = UDim2.new(1, -4, 1, 0),
+			position = UDim2.new(0, 2, 0, 0),
 		})
 		styleChips[styleId] = { button = chip, stroke = chipStroke, label = chipLabel, hover = false }
 	end
@@ -590,7 +590,7 @@ function AcademyPanel.create(Kit, State)
 				chip.stroke.Transparency = 0.2
 				chip.stroke.Thickness = 1
 				chip.label.TextColor3 = C.textOnGold
-				chip.label.Text = "✓ " .. styleId
+				chip.label.Text = styleId
 			elseif isPending then
 				chip.button.BackgroundColor3 = C.steel
 				chip.stroke.Color = C.steelBright
@@ -879,13 +879,11 @@ function AcademyPanel.create(Kit, State)
 				})
 				Kit.corner(accent, UDim.new(1, 0))
 			end
-			Kit.avatar({
+			Kit.ovrCard({
 				parent = row,
-				text = student.name,
-				size = 40,
+				student = student,
 				position = UDim2.new(0, 12, 0.5, 0),
 				anchor = Vector2.new(0, 0.5),
-				ringColor = Kit.potentialColor(student.potencialas),
 			})
 			Kit.label({
 				parent = row,
@@ -893,18 +891,17 @@ function AcademyPanel.create(Kit, State)
 				text = student.name or "?",
 				bold = true,
 				textSize = 14,
-				size = UDim2.new(1, -140, 0, 18),
-				position = UDim2.new(0, 62, 0, 13),
+				size = UDim2.new(1, -150, 0, 18),
+				position = UDim2.new(0, 66, 0, 13),
 			})
-			local stage = student.karjerosStadija == "Trial" and "Trial" or "Member"
 			Kit.label({
 				parent = row,
 				name = "Sub",
-				text = string.format("%s  •  OVR %d", stage, Kit.overall(student)),
+				text = student.karjerosStadija == "Trial" and "On trial" or (student.style or "Balanced"),
 				textSize = 12,
 				color = student.karjerosStadija == "Trial" and C.steelBright or C.textSecondary,
-				size = UDim2.new(1, -140, 0, 16),
-				position = UDim2.new(0, 62, 0, 34),
+				size = UDim2.new(1, -150, 0, 16),
+				position = UDim2.new(0, 66, 0, 34),
 			})
 			-- Busenos zyme (vietoj emoji): trauma > pavarges > paruostas kovoms
 			local statusBadge = nil

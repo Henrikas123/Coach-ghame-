@@ -1,340 +1,514 @@
 --[[
 	MainHUDController
-	Coach Academy - Premium Main HUD (Wave 3 -> Wave 4 polish pass)
-	StatusPanel (pinigai/reputacija), NavDock (Profilis/Akademija/Personalas/
-	Skautai/Remejai/Turnyrai), PhoneFab. Sukurta pagal GLOBAL DEVELOPMENT
-	STANDARD (premium quality: apvalinti kampai, sesely, hover/press animacijos,
-	nuosekli spalvu palete, tvarkinga tipografija).
+	Coach Academy main HUD in the "fight night" identity:
+	  * StatusPanel: a championship-belt plate -- tier gem medallion (Bronze/Silver/Gold/
+	    Sapphire/Ruby by reputation stars), animated money counter with +$/-$ pop-ups, tier name.
+	  * NavDock: the ring apron -- red corner and blue corner posts with three ropes over the
+	    dock; buttons show a tier accent and light up while their panel is open.
+	  * PhoneFab: gold phone button with a "post ready" badge.
+	Buttons call _G.CoachAcademyPanels[key]() (registered by PanelsBootstrap).
 ]]
 
 local TweenService = game:GetService("TweenService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local MainHUDController = {}
 
 -- ============================================================
--- SPALVU PALETE
+-- PALETTE
 -- ============================================================
 local COLORS = {
-	bg          = Color3.fromRGB(22, 20, 24),
-	bgCard      = Color3.fromRGB(30, 27, 32),
+	bg = Color3.fromRGB(22, 20, 24),
+	bgCard = Color3.fromRGB(30, 27, 32),
 	bgCardLight = Color3.fromRGB(38, 34, 40),
-	border      = Color3.fromRGB(64, 56, 40),
+	border = Color3.fromRGB(64, 56, 40),
 
-	gold        = Color3.fromRGB(212, 175, 55),
-	goldBright  = Color3.fromRGB(236, 200, 92),
+	gold = Color3.fromRGB(212, 175, 55),
+	goldBright = Color3.fromRGB(236, 200, 92),
 
-	steel       = Color3.fromRGB(70, 108, 148),
+	steel = Color3.fromRGB(70, 108, 148),
 	steelBright = Color3.fromRGB(96, 142, 188),
 
-	crimson       = Color3.fromRGB(178, 40, 54),
+	crimson = Color3.fromRGB(178, 40, 54),
 	crimsonBright = Color3.fromRGB(214, 62, 76),
 
-	textPrimary   = Color3.fromRGB(240, 235, 226),
+	textPrimary = Color3.fromRGB(240, 235, 226),
 	textSecondary = Color3.fromRGB(168, 160, 150),
-	textOnGold    = Color3.fromRGB(32, 24, 8),
+	textOnGold = Color3.fromRGB(32, 24, 8),
 
 	shadow = Color3.fromRGB(0, 0, 0),
+	white = Color3.new(1, 1, 1),
 }
 
-local REPUTATION_TIER_LT = {
-	["Local Coach"]       = "Local Coach",
-	["Rising Coach"]      = "Rising Coach",
-	["Respected Coach"]   = "Respected Coach",
-	["Elite Coach"]       = "Elite Coach",
-	["World-Class Coach"] = "World-Class Coach",
+-- Belt gem by reputation stars
+local GEMS = {
+	{ name = "Bronze", light = Color3.fromRGB(214, 150, 96), dark = Color3.fromRGB(120, 70, 36) },
+	{ name = "Silver", light = Color3.fromRGB(226, 228, 232), dark = Color3.fromRGB(120, 124, 132) },
+	{ name = "Gold", light = COLORS.goldBright, dark = Color3.fromRGB(150, 112, 32) },
+	{ name = "Sapphire", light = COLORS.steelBright, dark = Color3.fromRGB(36, 62, 96) },
+	{ name = "Ruby", light = COLORS.crimsonBright, dark = Color3.fromRGB(110, 20, 32) },
 }
 
 local NAV_ITEMS = {
-	{ key = "Profile",    label = "Profile",    tier = "primary",   icon = "\240\159\145\164" },
-	{ key = "Academy",    label = "Academy",    tier = "primary",   icon = "\240\159\143\155" },
-	{ key = "Staff",      label = "Staff",      tier = "secondary", icon = "\240\159\145\165" },
-	{ key = "Scout",      label = "Scouting",   tier = "secondary", icon = "\240\159\148\142" },
-	{ key = "Sponsor",    label = "Sponsors",   tier = "secondary", icon = "\240\159\164\157" },
-	{ key = "Tournament", label = "Tournaments", tier = "highlight", icon = "\240\159\143\134" },
+	{ key = "Profile", label = "PROFILE", accent = COLORS.gold },
+	{ key = "Academy", label = "ACADEMY", accent = COLORS.gold },
+	{ key = "Staff", label = "STAFF", accent = COLORS.steelBright },
+	{ key = "Scout", label = "SCOUTING", accent = COLORS.steelBright },
+	{ key = "Sponsor", label = "SPONSORS", accent = COLORS.steelBright },
+	{ key = "Tournament", label = "TOURNAMENTS", accent = COLORS.crimsonBright },
 }
 
-local TIER_STYLE = {
-	primary   = { base = COLORS.gold,    hover = COLORS.goldBright,    text = COLORS.textOnGold  },
-	secondary = { base = COLORS.steel,   hover = COLORS.steelBright,   text = COLORS.textPrimary },
-	highlight = { base = COLORS.crimson, hover = COLORS.crimsonBright, text = COLORS.textPrimary },
-}
+local IconConfig = nil
+do
+	local modules = ReplicatedStorage:FindFirstChild("Modules")
+	local iconModule = modules and modules:FindFirstChild("IconConfig")
+	if iconModule then
+		local ok, result = pcall(require, iconModule)
+		if ok then
+			IconConfig = result
+		end
+	end
+end
 
 -- ============================================================
--- UI PAGALBINES FUNKCIJOS
+-- HELPERS
 -- ============================================================
+local function tween(inst, time, goals, style, direction, repeatCount, reverses)
+	local t = TweenService:Create(inst, TweenInfo.new(time, style or Enum.EasingStyle.Quad, direction or Enum.EasingDirection.Out, repeatCount or 0, reverses or false), goals)
+	t:Play()
+	return t
+end
+
+local function new(className, props, parent)
+	local inst = Instance.new(className)
+	for key, value in pairs(props) do
+		inst[key] = value
+	end
+	inst.Parent = parent
+	return inst
+end
+
 local function corner(parent, radius)
-	local c = Instance.new("UICorner")
-	c.CornerRadius = radius or UDim.new(0, 12)
-	c.Parent = parent
-	return c
+	return new("UICorner", { CornerRadius = typeof(radius) == "UDim" and radius or UDim.new(0, radius or 12) }, parent)
 end
 
 local function stroke(parent, color, thickness, transparency)
-	local s = Instance.new("UIStroke")
-	s.Color = color
-	s.Thickness = thickness or 1
-	s.Transparency = transparency or 0.35
-	s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-	s.Parent = parent
-	return s
+	return new("UIStroke", {
+		Color = color,
+		Thickness = thickness or 1,
+		Transparency = transparency or 0.35,
+		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+	}, parent)
+end
+
+-- UIGradient multiplies BackgroundColor3, so the frame background is set to white
+local function gradient(parent, top, bottom, rotation)
+	parent.BackgroundColor3 = COLORS.white
+	return new("UIGradient", {
+		Color = ColorSequence.new(top, bottom),
+		Rotation = rotation or 90,
+	}, parent)
+end
+
+local function label(props)
+	return new("TextLabel", {
+		Name = props.name or "Label",
+		BackgroundTransparency = 1,
+		Font = props.font or Enum.Font.Gotham,
+		Text = props.text or "",
+		TextSize = props.size or 16,
+		TextColor3 = props.color or COLORS.textPrimary,
+		TextXAlignment = props.align or Enum.TextXAlignment.Left,
+		TextYAlignment = Enum.TextYAlignment.Center,
+		TextTruncate = Enum.TextTruncate.AtEnd,
+		RichText = props.rich == true,
+		Size = props.uiSize or UDim2.new(1, 0, 1, 0),
+		Position = props.position or UDim2.new(),
+		AnchorPoint = props.anchor or Vector2.new(0, 0),
+		ZIndex = props.zIndex or 2,
+	}, props.parent)
 end
 
 local function addShadow(target, transparency, offsetY, radius)
-	local shadow = Instance.new("Frame")
-	shadow.Name = "CardShadow"
-	shadow.BackgroundColor3 = COLORS.shadow
-	shadow.BackgroundTransparency = transparency or 0.55
-	shadow.BorderSizePixel = 0
-	shadow.AnchorPoint = target.AnchorPoint
-	shadow.Size = target.Size
-	shadow.Position = target.Position + UDim2.new(0, 0, 0, offsetY or 4)
-	shadow.ZIndex = target.ZIndex - 1
-	shadow.Parent = target.Parent
+	local shadow = new("Frame", {
+		Name = target.Name .. "Shadow",
+		BackgroundColor3 = COLORS.shadow,
+		BackgroundTransparency = transparency or 0.55,
+		BorderSizePixel = 0,
+		AnchorPoint = target.AnchorPoint,
+		Size = target.Size,
+		Position = target.Position + UDim2.new(0, 0, 0, offsetY or 4),
+		ZIndex = target.ZIndex - 1,
+	}, target.Parent)
 	corner(shadow, radius or UDim.new(0, 14))
-
-	target:GetPropertyChangedSignal("Size"):Connect(function()
-		shadow.Size = target.Size
-	end)
 	target:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
 		shadow.Size = UDim2.new(0, target.AbsoluteSize.X, 0, target.AbsoluteSize.Y)
 	end)
-
 	return shadow
 end
 
-local function makeLabel(props)
-	local l = Instance.new("TextLabel")
-	l.BackgroundTransparency = 1
-	l.Font = props.font or Enum.Font.Gotham
-	l.TextColor3 = props.color or COLORS.textPrimary
-	l.TextSize = props.size or 16
-	l.TextXAlignment = props.align or Enum.TextXAlignment.Left
-	l.TextYAlignment = Enum.TextYAlignment.Center
-	l.Text = props.text or ""
-	l.Size = props.uiSize or UDim2.new(1, 0, 1, 0)
-	l.Position = props.position or UDim2.new(0, 0, 0, 0)
-	l.AnchorPoint = props.anchor or Vector2.new(0, 0)
-	l.TextTruncate = Enum.TextTruncate.AtEnd
-	l.ZIndex = props.zIndex or 2
-	l.Name = props.name or "Label"
-	l.Parent = props.parent
-	return l
+local function formatMoney(n)
+	n = math.floor((tonumber(n) or 0) + 0.5)
+	local digits = tostring(math.abs(n)):reverse():gsub("(%d%d%d)", "%1,"):reverse():gsub("^,", "")
+	return (n < 0 and "-$" or "$") .. digits
 end
 
-local function attachPressFeedback(button)
-	local uiScale = Instance.new("UIScale")
-	uiScale.Scale = 1
-	uiScale.Parent = button
+local function starsRich(stars)
+	stars = math.clamp(stars or 1, 0, 5)
+	return string.format('<font color="#D4AF37">%s</font><font color="#6A5E48">%s</font>',
+		string.rep("★", stars), string.rep("☆", 5 - stars))
+end
+
+local function makeIcon(parent, name, props)
+	if IconConfig then
+		return IconConfig.make(parent, name, props)
+	end
+	return label({ parent = parent, name = "Icon", text = "•", size = props.textSize or 20, align = Enum.TextXAlignment.Center, uiSize = props.size, position = props.position, anchor = props.anchor, zIndex = props.zIndex })
+end
+
+local function attachPress(button, scale)
 	button.MouseButton1Down:Connect(function()
-		TweenService:Create(uiScale, TweenInfo.new(0.06, Enum.EasingStyle.Quad), {Scale = 0.94}):Play()
+		tween(scale, 0.06, { Scale = 0.93 })
 	end)
 	local function release()
-		TweenService:Create(uiScale, TweenInfo.new(0.14, Enum.EasingStyle.Back), {Scale = 1}):Play()
+		tween(scale, 0.16, { Scale = 1 }, Enum.EasingStyle.Back)
 	end
 	button.MouseButton1Up:Connect(release)
 	button.MouseLeave:Connect(release)
 end
 
-local function styleButtonHover(button, style)
-	button.MouseEnter:Connect(function()
-		TweenService:Create(button, TweenInfo.new(0.12), {BackgroundColor3 = style.hover}):Play()
-	end)
-	button.MouseLeave:Connect(function()
-		TweenService:Create(button, TweenInfo.new(0.16), {BackgroundColor3 = style.base}):Play()
-	end)
-end
-
 -- ============================================================
--- STATUS PANEL (virsus kaire - pinigai + reputacija)
+-- STATUS PANEL: championship belt plate
 -- ============================================================
 local function buildStatusPanel(screenGui)
-	local panel = Instance.new("Frame")
-	panel.Name = "StatusPanel"
-	panel.AnchorPoint = Vector2.new(0, 0)
-	panel.Position = UDim2.new(0, 16, 0, 16)
-	panel.Size = UDim2.new(0, 250, 0, 76)
-	-- UIGradient daugina savo spalvas is BackgroundColor3 -> baltas fonas, kad matytusi bgCardLight->bgCard
-	panel.BackgroundColor3 = Color3.new(1, 1, 1)
-	panel.BorderSizePixel = 0
-	panel.ZIndex = 2
-	panel.Parent = screenGui
-	corner(panel, UDim.new(0, 14))
-	stroke(panel, COLORS.border, 1, 0.25)
-	addShadow(panel, 0.6, 5)
+	local panel = new("Frame", {
+		Name = "StatusPanel",
+		Position = UDim2.new(0, 16, 0, 16),
+		Size = UDim2.new(0, 268, 0, 80),
+		BorderSizePixel = 0,
+		ZIndex = 2,
+	}, screenGui)
+	corner(panel, 16)
+	stroke(panel, COLORS.gold, 1.5, 0.35)
+	gradient(panel, Color3.fromRGB(50, 43, 50), Color3.fromRGB(24, 21, 26))
+	addShadow(panel, 0.55, 5, UDim.new(0, 16))
 
-	local grad = Instance.new("UIGradient")
-	grad.Color = ColorSequence.new({
-		ColorSequenceKeypoint.new(0, COLORS.bgCardLight),
-		ColorSequenceKeypoint.new(1, COLORS.bgCard),
+	-- leather stitching
+	for _, y in ipairs({ 6, 73 }) do
+		for i = 0, 17 do
+			new("Frame", {
+				Name = "Stitch",
+				Position = UDim2.new(0, 82 + i * 10, 0, y),
+				Size = UDim2.new(0, 5, 0, 1),
+				BackgroundColor3 = COLORS.gold,
+				BackgroundTransparency = 0.6,
+				BorderSizePixel = 0,
+				ZIndex = 3,
+			}, panel)
+		end
+	end
+
+	-- gem medallion
+	local medal = new("Frame", {
+		Name = "Medal",
+		AnchorPoint = Vector2.new(0, 0.5),
+		Position = UDim2.new(0, 10, 0.5, 0),
+		Size = UDim2.new(0, 62, 0, 62),
+		ZIndex = 3,
+	}, panel)
+	corner(medal, UDim.new(1, 0))
+	stroke(medal, COLORS.goldBright, 2, 0.05)
+	gradient(medal, Color3.fromRGB(70, 58, 40), Color3.fromRGB(28, 24, 20), 135)
+	local medalScale = new("UIScale", { Scale = 1 }, medal)
+	local gem = new("Frame", {
+		Name = "Gem",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.new(0, 46, 0, 46),
+		ZIndex = 4,
+	}, medal)
+	corner(gem, UDim.new(1, 0))
+	stroke(gem, COLORS.textOnGold, 1, 0.5)
+	local gemGradient = gradient(gem, GEMS[1].light, GEMS[1].dark, 135)
+	local gemStar = label({
+		parent = gem,
+		name = "Star",
+		text = "★",
+		font = Enum.Font.GothamBlack,
+		size = 24,
+		color = COLORS.white,
+		align = Enum.TextXAlignment.Center,
+		zIndex = 5,
 	})
-	grad.Rotation = 90
-	grad.Parent = panel
+	gemStar.TextStrokeTransparency = 0.6
 
-	local padding = Instance.new("UIPadding")
-	padding.PaddingLeft = UDim.new(0, 14)
-	padding.PaddingRight = UDim.new(0, 14)
-	padding.PaddingTop = UDim.new(0, 8)
-	padding.PaddingBottom = UDim.new(0, 8)
-	padding.Parent = panel
-
-	local moneyRow = Instance.new("Frame")
-	moneyRow.Name = "MoneyRow"
-	moneyRow.BackgroundTransparency = 1
-	moneyRow.Size = UDim2.new(1, 0, 0, 26)
-	moneyRow.Position = UDim2.new(0, 0, 0, 0)
-	moneyRow.ZIndex = 3
-	moneyRow.Parent = panel
-
-	makeLabel({
-		parent = moneyRow, name = "MoneyIcon", text = "\240\159\146\176",
-		size = 18, uiSize = UDim2.new(0, 24, 1, 0), align = Enum.TextXAlignment.Left, zIndex = 3,
+	local moneyLabel = label({
+		parent = panel,
+		name = "MoneyValue",
+		text = "$0",
+		font = Enum.Font.GothamBlack,
+		size = 24,
+		color = COLORS.goldBright,
+		uiSize = UDim2.new(1, -94, 0, 28),
+		position = UDim2.new(0, 84, 0, 9),
+		zIndex = 3,
 	})
-	local moneyLabel = makeLabel({
-		parent = moneyRow, name = "MoneyValue", text = "0",
-		font = Enum.Font.GothamBold, color = COLORS.goldBright, size = 18,
-		uiSize = UDim2.new(1, -28, 1, 0), position = UDim2.new(0, 28, 0, 0), zIndex = 3,
+	local tierLabel = label({
+		parent = panel,
+		name = "ReputationValue",
+		text = "LOCAL COACH",
+		font = Enum.Font.Oswald,
+		size = 16,
+		color = COLORS.textPrimary,
+		uiSize = UDim2.new(1, -94, 0, 18),
+		position = UDim2.new(0, 84, 0, 38),
+		zIndex = 3,
 	})
-
-	local divider = Instance.new("Frame")
-	divider.Name = "Divider"
-	divider.BackgroundColor3 = COLORS.border
-	divider.BackgroundTransparency = 0.4
-	divider.BorderSizePixel = 0
-	divider.Size = UDim2.new(1, 0, 0, 1)
-	divider.Position = UDim2.new(0, 0, 0, 30)
-	divider.ZIndex = 3
-	divider.Parent = panel
-
-	local repRow = Instance.new("Frame")
-	repRow.Name = "ReputationRow"
-	repRow.BackgroundTransparency = 1
-	repRow.Size = UDim2.new(1, 0, 0, 30)
-	repRow.Position = UDim2.new(0, 0, 0, 38)
-	repRow.ZIndex = 3
-	repRow.Parent = panel
-
-	local repLabel = makeLabel({
-		parent = repRow, name = "ReputationValue", text = "Local Coach",
-		font = Enum.Font.Gotham, color = COLORS.textSecondary, size = 13,
-		uiSize = UDim2.new(1, 0, 0, 16), position = UDim2.new(0, 0, 0, 0), zIndex = 3,
-	})
-	local starsLabel = makeLabel({
-		parent = repRow, name = "ReputationStars", text = "\226\152\134\226\152\134\226\152\134\226\152\134\226\152\134",
-		font = Enum.Font.GothamBold, color = COLORS.gold, size = 14,
-		uiSize = UDim2.new(1, 0, 0, 14), position = UDim2.new(0, 0, 0, 16), zIndex = 3,
+	local starsLabel = label({
+		parent = panel,
+		name = "ReputationStars",
+		text = starsRich(1),
+		rich = true,
+		font = Enum.Font.GothamBold,
+		size = 13,
+		uiSize = UDim2.new(1, -94, 0, 14),
+		position = UDim2.new(0, 84, 0, 56),
+		zIndex = 3,
 	})
 
-	return panel, moneyLabel, repLabel, starsLabel
+	return {
+		panel = panel,
+		money = moneyLabel,
+		tier = tierLabel,
+		stars = starsLabel,
+		gemGradient = gemGradient,
+		medalScale = medalScale,
+	}
 end
 
 -- ============================================================
--- NAV DOCK MYGTUKAS
+-- NAV DOCK: ring apron with corner posts and ropes
 -- ============================================================
-local function createNavButton(parent, item, layoutOrder)
-	local style = TIER_STYLE[item.tier]
-	local btn = Instance.new("TextButton")
-	btn.Name = item.key .. "Button"
-	btn.LayoutOrder = layoutOrder
-	btn.AutoButtonColor = false
-	btn.BackgroundColor3 = style.base
-	btn.Size = UDim2.new(0, 96, 1, -12)
-	btn.Text = ""
-	btn.ZIndex = 3
-	btn.Parent = parent
-	corner(btn, UDim.new(0, 12))
-	stroke(btn, style.hover, 1, 0.55)
-	attachPressFeedback(btn)
-	styleButtonHover(btn, style)
+local function createNavButton(parent, item, order)
+	local btn = new("TextButton", {
+		Name = item.key .. "Button",
+		LayoutOrder = order,
+		AutoButtonColor = false,
+		Text = "",
+		Size = UDim2.new(0, 98, 0, 52),
+		ZIndex = 4,
+	}, parent)
+	corner(btn, 11)
+	local btnStroke = stroke(btn, COLORS.border, 1, 0.35)
+	gradient(btn, COLORS.bgCardLight, COLORS.bgCard)
+	local scale = new("UIScale", { Scale = 1 }, btn)
+	attachPress(btn, scale)
 
-	makeLabel({
-		parent = btn, name = "Icon", text = item.icon, size = 20,
-		uiSize = UDim2.new(1, 0, 0, 22), position = UDim2.new(0, 0, 0, 6),
-		align = Enum.TextXAlignment.Center, zIndex = 4,
+	local glow = new("Frame", {
+		Name = "ActiveGlow",
+		Size = UDim2.fromScale(1, 1),
+		BackgroundColor3 = item.accent,
+		BackgroundTransparency = 1,
+		ZIndex = 4,
+	}, btn)
+	corner(glow, 11)
+	local accent = new("Frame", {
+		Name = "Accent",
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, 0),
+		Size = UDim2.new(0, 44, 0, 3),
+		BackgroundColor3 = item.accent,
+		BorderSizePixel = 0,
+		ZIndex = 6,
+	}, btn)
+	corner(accent, UDim.new(1, 0))
+
+	makeIcon(btn, item.key, {
+		color = item.accent,
+		textSize = 19,
+		size = UDim2.new(0, 22, 0, 22),
+		anchor = Vector2.new(0.5, 0),
+		position = UDim2.new(0.5, 0, 0, 7),
+		zIndex = 5,
 	})
-	makeLabel({
-		parent = btn, name = "Label", text = item.label,
-		font = Enum.Font.GothamBold, color = style.text, size = 12,
-		uiSize = UDim2.new(1, 0, 0, 16), position = UDim2.new(0, 0, 1, -18),
-		align = Enum.TextXAlignment.Center, zIndex = 4,
+	local text = label({
+		parent = btn,
+		name = "Label",
+		text = item.label,
+		font = Enum.Font.Oswald,
+		size = 14,
+		color = COLORS.textPrimary,
+		align = Enum.TextXAlignment.Center,
+		uiSize = UDim2.new(1, -6, 0, 16),
+		position = UDim2.new(0, 3, 1, -20),
+		zIndex = 5,
 	})
 
-	return btn
+	local state = { hover = false, active = false }
+	local function paint()
+		local lit = state.hover or state.active
+		tween(accent, 0.15, { Size = UDim2.new(0, lit and 70 or 44, 0, state.active and 4 or 3) })
+		tween(glow, 0.15, { BackgroundTransparency = state.active and 0.82 or (state.hover and 0.92 or 1) })
+		tween(btnStroke, 0.15, { Color = lit and item.accent or COLORS.border, Transparency = lit and 0.25 or 0.35 })
+		text.TextColor3 = state.active and item.accent or COLORS.textPrimary
+	end
+	btn.MouseEnter:Connect(function()
+		state.hover = true
+		paint()
+	end)
+	btn.MouseLeave:Connect(function()
+		state.hover = false
+		paint()
+	end)
+	return btn, function(active)
+		state.active = active
+		paint()
+	end
 end
 
 local function buildNavDock(screenGui)
-	local dock = Instance.new("Frame")
-	dock.Name = "NavDock"
-	dock.AnchorPoint = Vector2.new(0.5, 1)
-	dock.Position = UDim2.new(0.5, 0, 1, -16)
-	dock.Size = UDim2.new(0, 0, 0, 64)
-	dock.AutomaticSize = Enum.AutomaticSize.X
-	dock.BackgroundColor3 = Color3.new(1, 1, 1) -- spalva ateina is UIGradient (zr. StatusPanel)
-	dock.BorderSizePixel = 0
-	dock.ZIndex = 2
-	dock.Parent = screenGui
-	corner(dock, UDim.new(0, 16))
-	stroke(dock, COLORS.border, 1, 0.3)
-	addShadow(dock, 0.6, 5)
+	local dock = new("Frame", {
+		Name = "NavDock",
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.new(0.5, 0, 1, -16),
+		Size = UDim2.new(0, 0, 0, 64),
+		AutomaticSize = Enum.AutomaticSize.X,
+		BorderSizePixel = 0,
+		ZIndex = 3,
+	}, screenGui)
+	corner(dock, 14)
+	stroke(dock, COLORS.border, 1, 0.25)
+	gradient(dock, Color3.fromRGB(46, 40, 48), Color3.fromRGB(22, 19, 24))
+	addShadow(dock, 0.55, 5, UDim.new(0, 14))
 
-	local grad = Instance.new("UIGradient")
-	grad.Color = ColorSequence.new({
-		ColorSequenceKeypoint.new(0, COLORS.bgCardLight),
-		ColorSequenceKeypoint.new(1, COLORS.bgCard),
-	})
-	grad.Rotation = 90
-	grad.Parent = dock
+	new("UIListLayout", {
+		FillDirection = Enum.FillDirection.Horizontal,
+		SortOrder = Enum.SortOrder.LayoutOrder,
+		VerticalAlignment = Enum.VerticalAlignment.Center,
+		HorizontalAlignment = Enum.HorizontalAlignment.Center,
+		Padding = UDim.new(0, 8),
+	}, dock)
+	new("UIPadding", { PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8) }, dock)
 
-	local listLayout = Instance.new("UIListLayout")
-	listLayout.FillDirection = Enum.FillDirection.Horizontal
-	listLayout.SortOrder = Enum.SortOrder.LayoutOrder
-	listLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-	listLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-	listLayout.Padding = UDim.new(0, 8)
-	listLayout.Parent = dock
-
-	local padding = Instance.new("UIPadding")
-	padding.PaddingLeft = UDim.new(0, 10)
-	padding.PaddingRight = UDim.new(0, 10)
-	padding.Parent = dock
-
-	local buttons = {}
-	for idx, item in ipairs(NAV_ITEMS) do
-		buttons[item.key] = createNavButton(dock, item, idx)
+	-- Ring: corner posts at both ends and three ropes over the dock (not part of the list layout)
+	local ring = new("Frame", {
+		Name = "Ring",
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.new(0.5, 0, 1, -16),
+		Size = UDim2.new(0, #NAV_ITEMS * 98 + (#NAV_ITEMS - 1) * 8 + 16 + 36, 0, 86),
+		BackgroundTransparency = 1,
+		ZIndex = 2,
+	}, screenGui)
+	dock:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+		ring.Size = UDim2.new(0, dock.AbsoluteSize.X + 36, 0, 86)
+	end)
+	for index, def in ipairs({
+		{ color = COLORS.crimsonBright, dark = COLORS.crimson },
+		{ color = COLORS.textPrimary, dark = Color3.fromRGB(150, 144, 136) },
+		{ color = COLORS.steelBright, dark = COLORS.steel },
+	}) do
+		local rope = new("Frame", {
+			Name = "Rope" .. index,
+			Position = UDim2.new(0, 10, 0, 2 + (index - 1) * 7),
+			Size = UDim2.new(1, -20, 0, 3),
+			BorderSizePixel = 0,
+			ZIndex = 2,
+		}, ring)
+		corner(rope, UDim.new(1, 0))
+		gradient(rope, def.color, def.dark)
+	end
+	for _, def in ipairs({
+		{ name = "RedCorner", x = 0, anchor = 0, light = COLORS.crimsonBright, dark = COLORS.crimson },
+		{ name = "BlueCorner", x = 1, anchor = 1, light = COLORS.steelBright, dark = COLORS.steel },
+	}) do
+		local post = new("Frame", {
+			Name = def.name,
+			AnchorPoint = Vector2.new(def.anchor, 1),
+			Position = UDim2.new(def.x, 0, 1, 0),
+			Size = UDim2.new(0, 14, 1, 0),
+			BorderSizePixel = 0,
+			ZIndex = 5,
+		}, ring)
+		corner(post, 7)
+		stroke(post, COLORS.shadow, 1, 0.6)
+		gradient(post, def.light, def.dark, 0)
+		-- turnbuckle pads where the ropes attach
+		for i = 0, 2 do
+			new("Frame", {
+				Name = "Pad",
+				AnchorPoint = Vector2.new(0.5, 0),
+				Position = UDim2.new(0.5, 0, 0, 1 + i * 7),
+				Size = UDim2.new(1, 4, 0, 5),
+				BackgroundColor3 = COLORS.bgCard,
+				BorderSizePixel = 0,
+				ZIndex = 6,
+			}, post)
+		end
 	end
 
-	return dock, buttons
+	local buttons, setters = {}, {}
+	for index, item in ipairs(NAV_ITEMS) do
+		buttons[item.key], setters[item.key] = createNavButton(dock, item, index)
+	end
+	return dock, buttons, setters, ring
 end
 
 -- ============================================================
--- TELEFONO FAB (apacia desine)
+-- PHONE FAB
 -- ============================================================
 local function buildPhoneFab(screenGui)
-	local fab = Instance.new("TextButton")
-	fab.Name = "PhoneFab"
-	fab.AnchorPoint = Vector2.new(1, 1)
-	fab.Position = UDim2.new(1, -20, 1, -20)
-	fab.Size = UDim2.new(0, 60, 0, 60)
-	fab.BackgroundColor3 = COLORS.gold
-	fab.AutoButtonColor = false
-	fab.Text = ""
-	fab.ZIndex = 2
-	fab.Parent = screenGui
+	local fab = new("TextButton", {
+		Name = "PhoneFab",
+		AnchorPoint = Vector2.new(1, 1),
+		Position = UDim2.new(1, -20, 1, -20),
+		Size = UDim2.new(0, 60, 0, 60),
+		AutoButtonColor = false,
+		Text = "",
+		ZIndex = 3,
+	}, screenGui)
 	corner(fab, UDim.new(1, 0))
-	stroke(fab, COLORS.goldBright, 1.5, 0.2)
-	addShadow(fab, 0.55, 5, UDim.new(1, 0)) -- apvalus seselis apvaliam mygtukui
-	attachPressFeedback(fab)
-	styleButtonHover(fab, TIER_STYLE.primary)
-
-	makeLabel({
-		parent = fab, name = "Icon", text = "\240\159\147\177", size = 26,
-		align = Enum.TextXAlignment.Center, zIndex = 4,
+	stroke(fab, COLORS.goldBright, 2, 0.15)
+	gradient(fab, COLORS.goldBright, COLORS.gold)
+	addShadow(fab, 0.5, 5, UDim.new(1, 0))
+	local scale = new("UIScale", { Scale = 1 }, fab)
+	attachPress(fab, scale)
+	fab.MouseEnter:Connect(function()
+		tween(scale, 0.15, { Scale = 1.06 })
+	end)
+	makeIcon(fab, "Phone", {
+		color = COLORS.textOnGold,
+		textSize = 26,
+		size = UDim2.new(0, 30, 0, 30),
+		anchor = Vector2.new(0.5, 0.5),
+		position = UDim2.fromScale(0.5, 0.5),
+		zIndex = 4,
 	})
-
-	return fab
+	local badge = new("Frame", {
+		Name = "Badge",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.new(1, -8, 0, 8),
+		Size = UDim2.new(0, 22, 0, 22),
+		BackgroundColor3 = COLORS.crimsonBright,
+		Visible = false,
+		ZIndex = 6,
+	}, fab)
+	corner(badge, UDim.new(1, 0))
+	stroke(badge, COLORS.bg, 2, 0)
+	local badgeText = label({
+		parent = badge,
+		name = "Count",
+		text = "!",
+		font = Enum.Font.GothamBlack,
+		size = 12,
+		color = COLORS.white,
+		align = Enum.TextXAlignment.Center,
+		zIndex = 7,
+	})
+	return fab, badge, badgeText
 end
 
 -- ============================================================
--- PANEL ISSAUKIMO PAGALBININKAS
+-- PANEL CALLS
 -- ============================================================
 local function callPanel(key)
 	task.spawn(function()
@@ -343,93 +517,94 @@ local function callPanel(key)
 			if _G.CoachAcademyPanels and _G.CoachAcademyPanels[key] then
 				local ok, err = pcall(_G.CoachAcademyPanels[key])
 				if not ok then
-					warn("MainHUDController: klaida atidarant panele '" .. key .. "': " .. tostring(err))
+					warn("MainHUDController: failed to open panel '" .. key .. "': " .. tostring(err))
 				end
 				return
 			end
 			task.wait(0.1)
 			waited += 0.1
 		end
-		warn("MainHUDController: panele '" .. key .. "' neprisiregistravo per 5s (_G.CoachAcademyPanels." .. key .. ")")
+		warn("MainHUDController: panel '" .. key .. "' was not registered within 5s")
 	end)
 end
 
 -- ============================================================
--- REPUTACIJOS / PINIGU DUOMENU SINCHRONIZAVIMAS
+-- LIVE DATA
 -- ============================================================
-local function starString(stars)
-	stars = math.clamp(stars or 1, 0, 5)
-	return string.rep("\226\152\133", stars) .. string.rep("\226\152\134", 5 - stars)
-end
-
--- Sena ReputationLabel.Text formatas (is ReputationUI.lua):
---   starString(stars) .. " " .. tierName .. [" (%d/%d)"]
--- Cia ji issiurbiama i (starsCount, tierNameOnly), kad galetume
--- atvaizduoti zvaigzdes atskirai ir isversti tik tikrini pavadinima.
-local function parseOldReputationText(text)
-	local filled = 0
-	local i = 1
-	local len = #text
-	while i <= len do
-		local three = text:sub(i, i + 2)
-		if three == "\226\152\133" then -- filled star
-			filled += 1
-			i += 3
-		elseif three == "\226\152\134" then -- empty star
-			i += 3
-		else
-			break
-		end
-	end
-	if i <= 1 then
-		return nil, nil
-	end
-	local rest = text:sub(i)
-	rest = rest:gsub("^%s+", "")
-	local tierNameOnly = rest:match("^(.-)%s*%(") or rest
-	tierNameOnly = tierNameOnly:gsub("%s+$", "")
-	if tierNameOnly == "" then
-		return filled, nil
-	end
-	return filled, tierNameOnly
-end
-
-local function bindLiveData(player, moneyLabel, repLabel, starsLabel)
+local function bindLiveData(player, status, fabBadge, fabBadgeText, setActive)
 	local playerGui = player:WaitForChild("PlayerGui")
 
-	task.spawn(function()
-		local oldHud = playerGui:WaitForChild("MainHUD", 10)
-		if not oldHud then
-			warn("MainHUDController: senas MainHUD nerastas per 10s")
+	-- money counter: counts up/down, pops "+$25" / "-$150"
+	local shownMoney = nil
+	local counter = Instance.new("NumberValue")
+	counter:GetPropertyChangedSignal("Value"):Connect(function()
+		status.money.Text = formatMoney(counter.Value)
+	end)
+	local function popDelta(delta)
+		local pop = label({
+			parent = status.panel,
+			name = "MoneyDelta",
+			text = (delta > 0 and "+" or "") .. formatMoney(delta),
+			font = Enum.Font.GothamBlack,
+			size = 16,
+			color = delta > 0 and COLORS.goldBright or COLORS.crimsonBright,
+			align = Enum.TextXAlignment.Right,
+			uiSize = UDim2.new(0, 120, 0, 20),
+			position = UDim2.new(1, -10, 0, 12),
+			anchor = Vector2.new(1, 0),
+			zIndex = 8,
+		})
+		pop.TextStrokeTransparency = 0.5
+		tween(pop, 1.1, { Position = UDim2.new(1, -10, 0, -14), TextTransparency = 1, TextStrokeTransparency = 1 }, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+		task.delay(1.15, function()
+			pop:Destroy()
+		end)
+	end
+	local function setMoney(amount, Sfx)
+		if type(amount) ~= "number" then
 			return
 		end
-		local oldMoney = oldHud:WaitForChild("MoneyLabel", 5)
-		if oldMoney then
-			local function sync()
-				moneyLabel.Text = oldMoney.Text
-			end
-			sync()
-			oldMoney:GetPropertyChangedSignal("Text"):Connect(sync)
-		else
-			warn("MainHUDController: MoneyLabel nerastas senoje MainHUD")
+		if shownMoney == nil then
+			shownMoney = amount
+			counter.Value = amount
+			status.money.Text = formatMoney(amount)
+			return
 		end
-
-		local oldRep = oldHud:FindFirstChild("ReputationLabel")
-		if oldRep and oldRep.Text ~= "" then
-			local stars, tierName = parseOldReputationText(oldRep.Text)
-			if tierName then
-				repLabel.Text = REPUTATION_TIER_LT[tierName] or tierName
-			end
-			if stars then
-				starsLabel.Text = starString(stars)
-			end
+		local delta = amount - shownMoney
+		if delta == 0 then
+			return
 		end
-	end)
+		shownMoney = amount
+		popDelta(delta)
+		if delta > 0 and Sfx then
+			Sfx.play("Cash")
+		end
+		tween(counter, math.clamp(math.abs(delta) / 400, 0.35, 1.2), { Value = amount }, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+	end
 
-	-- HUD paneliu ClientState (jei idiegtas): patikimas pinigu/reputacijos saltinis, nepriklausantis nuo
-	-- to, kuris LocalScript pirmas "pagavo" pradinius serverio pranesimus (RemoteEvent eile).
+	local shownStars = nil
+	local function setReputation(stars, tierName, Sfx)
+		if tierName then
+			status.tier.Text = string.upper(tierName)
+		end
+		if stars then
+			stars = math.clamp(stars, 1, 5)
+			status.stars.Text = starsRich(stars)
+			local gem = GEMS[stars]
+			status.gemGradient.Color = ColorSequence.new(gem.light, gem.dark)
+			if shownStars and stars > shownStars then
+				if Sfx then
+					Sfx.play("LevelUp")
+				end
+				status.medalScale.Scale = 1.35
+				tween(status.medalScale, 0.5, { Scale = 1 }, Enum.EasingStyle.Elastic)
+			end
+			shownStars = stars
+		end
+	end
+
 	task.spawn(function()
-		local modules = game:GetService("ReplicatedStorage"):FindFirstChild("Modules")
+		local modules = ReplicatedStorage:WaitForChild("Modules", 10)
 		local panels = modules and modules:WaitForChild("Panels", 10)
 		local stateModule = panels and panels:WaitForChild("ClientState", 10)
 		if not stateModule then
@@ -439,53 +614,105 @@ local function bindLiveData(player, moneyLabel, repLabel, starsLabel)
 		if not ok or type(ClientState) ~= "table" or not ClientState.subscribe then
 			return
 		end
-		local function renderMoney(state)
-			if type(state.money) == "number" then
-				moneyLabel.Text = "$ " .. tostring(state.money)
-			end
+		local Sfx = nil
+		local sfxModule = modules:FindFirstChild("Sfx")
+		if sfxModule then
+			local okSfx, result = pcall(require, sfxModule)
+			Sfx = okSfx and result or nil
 		end
-		local function renderReputation(state)
-			local rep = state.reputation
-			if rep and rep.tierName then
-				repLabel.Text = REPUTATION_TIER_LT[rep.tierName] or rep.tierName
-			end
-			if rep and rep.stars then
-				starsLabel.Text = starString(rep.stars)
-			end
+		local MarketingConfig = nil
+		local marketingModule = modules:FindFirstChild("MarketingConfig")
+		if marketingModule then
+			local okMarketing, result = pcall(require, marketingModule)
+			MarketingConfig = okMarketing and result or nil
 		end
-		ClientState.subscribe("money", renderMoney)
-		ClientState.subscribe("reputation", renderReputation)
+
+		ClientState.subscribe("money", function(state)
+			setMoney(state.money, Sfx)
+		end)
+		ClientState.subscribe("reputation", function(state)
+			local rep = state.reputation or {}
+			setReputation(rep.stars, rep.tierName, Sfx)
+		end)
+
+		-- phone badge: number of posts ready to publish
+		local function refreshBadge()
+			if not MarketingConfig or not MarketingConfig.Items then
+				return
+			end
+			local state = ClientState.get()
+			local now = ClientState.now()
+			local ready = 0
+			for id, item in pairs(MarketingConfig.Items) do
+				if not item.locked then
+					local last = (state.marketing.lastPostTimes or {})[id]
+					if not last or now - last >= (item.cooldown or 0) then
+						ready += 1
+					end
+				end
+			end
+			fabBadge.Visible = ready > 0 and state.loaded == true
+			fabBadgeText.Text = tostring(ready)
+		end
+		ClientState.subscribe("marketing", refreshBadge)
+		task.spawn(function()
+			while playerGui.Parent do
+				refreshBadge()
+				task.wait(5)
+			end
+		end)
+
 		local current = ClientState.get()
 		if current.loaded then
-			renderMoney(current)
-			renderReputation(current)
+			setMoney(current.money, Sfx)
+			setReputation(current.reputation.stars, current.reputation.tierName, Sfx)
+		end
+		refreshBadge()
+
+		-- highlight the dock button of the open panel
+		local kitModule = panels:WaitForChild("PanelKit", 10)
+		if kitModule then
+			local okKit, PanelKit = pcall(require, kitModule)
+			if okKit and PanelKit.Changed then
+				PanelKit.Changed.Event:Connect(setActive)
+			end
 		end
 	end)
 
-	local remotes = game:GetService("ReplicatedStorage"):FindFirstChild("Remotes")
+	-- legacy MainHUD money label (old scripts still write to it)
+	task.spawn(function()
+		local oldHud = playerGui:WaitForChild("MainHUD", 10)
+		local oldMoney = oldHud and oldHud:WaitForChild("MoneyLabel", 5)
+		if oldMoney then
+			local function sync()
+				local amount = tonumber((oldMoney.Text:gsub("[^%d%-]", "")))
+				if amount and shownMoney == nil then
+					setMoney(amount)
+				end
+			end
+			sync()
+			oldMoney:GetPropertyChangedSignal("Text"):Connect(sync)
+		end
+	end)
+
+	local remotes = ReplicatedStorage:FindFirstChild("Remotes")
 	local reputationUpdate = remotes and remotes:FindFirstChild("ReputationUpdate")
 	if reputationUpdate then
 		reputationUpdate.OnClientEvent:Connect(function(data)
-			if not data then return end
-			if data.tierName then
-				repLabel.Text = REPUTATION_TIER_LT[data.tierName] or data.tierName
-			end
-			if data.stars then
-				starsLabel.Text = starString(data.stars)
+			if data then
+				setReputation(data.stars, data.tierName)
 			end
 		end)
-	else
-		warn("MainHUDController: ReputationUpdate RemoteEvent nerastas")
 	end
 end
 
 -- ============================================================
--- VIESA API
+-- PUBLIC API
 -- ============================================================
 function MainHUDController.Init(screenGui, player)
-	local statusPanel, moneyLabel, repLabel, starsLabel = buildStatusPanel(screenGui)
-	local navDock, navButtons = buildNavDock(screenGui)
-	local phoneFab = buildPhoneFab(screenGui)
+	local status = buildStatusPanel(screenGui)
+	local navDock, navButtons, setters = buildNavDock(screenGui)
+	local phoneFab, fabBadge, fabBadgeText = buildPhoneFab(screenGui)
 
 	for key, btn in pairs(navButtons) do
 		btn.MouseButton1Click:Connect(function()
@@ -496,10 +723,22 @@ function MainHUDController.Init(screenGui, player)
 		callPanel("Phone")
 	end)
 
-	bindLiveData(player, moneyLabel, repLabel, starsLabel)
+	local function setActive(key, isOpen)
+		if setters[key] then
+			if isOpen then
+				for otherKey, setter in pairs(setters) do
+					if otherKey ~= key then
+						setter(false)
+					end
+				end
+			end
+			setters[key](isOpen)
+		end
+	end
+	bindLiveData(player, status, fabBadge, fabBadgeText, setActive)
 
 	return {
-		StatusPanel = statusPanel,
+		StatusPanel = status.panel,
 		NavDock = navDock,
 		PhoneFab = phoneFab,
 	}

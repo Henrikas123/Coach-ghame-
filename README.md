@@ -1,11 +1,12 @@
 # Coach Academy
 
-Roblox boksininkų / kovotojų trenerių akademijos tycoon.
+Roblox boxing coach academy tycoon, by Henyte.
 
-- `CoachAcademy_active2_checkpoint.rbxl` — originalus checkpoint.
-- `CoachAcademy_panels.rbxl` — checkpoint su HUD panelėmis (Profilis, Akademija, Personalas, Skautai, Rėmėjai, Turnyrai, Telefonas).
-- `src/` — naujas ir pakeistas Luau kodas (Rojo stiliaus struktūra: `*.server.lua`, `*.client.lua`).
-- `tools/build_place.luau` — surenka `CoachAcademy_panels.rbxl` iš checkpoint + `src/` (`lune run tools/build_place.luau`).
-- `tools/ui-preview/` — Roblox mock + renderer: paleidžia tikrą serverio ir kliento kodą be Studio, daro ekrano nuotraukas ir tikrina srautus.
+- `CoachAcademy_panels.rbxl` — ready-to-open place: loading screen, title screen, HUD and all panels (English).
+- `CoachAcademy_active2_checkpoint.rbxl` — original checkpoint the build starts from.
+- `src/` — all game scripts (Rojo-style names: `*.server.lua`, `*.client.lua`).
+- `assets/icons/` — HUD icon PNGs to upload to Roblox (ids go into `IconConfig.lua`).
+- `tools/build_place.luau` — builds `CoachAcademy_panels.rbxl` from the checkpoint + `src/` (`lune run tools/build_place.luau`).
+- `tools/ui-preview/` — Roblox mock + renderer: runs the real server and client code without Studio, takes screenshots and checks flows.
 
-Išsamiau: [docs/HUD_PANELS.md](docs/HUD_PANELS.md).
+Details (Lithuanian): [docs/HUD_PANELS.md](docs/HUD_PANELS.md).

@@ -1116,6 +1116,11 @@ classMethods.ContentProvider = {
 		end
 	end,
 }
+classMethods.BindableEvent = {
+	Fire = function(self, ...)
+		getSignal(self, "Event"):Fire(...)
+	end,
+}
 classMethods.ReplicatedFirst = {
 	RemoveDefaultLoadingScreen = function()
 		world.defaultLoadingRemoved = true

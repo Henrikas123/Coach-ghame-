@@ -427,6 +427,63 @@ function TournamentPanel.create(Kit, State)
 		order = 5,
 	})
 
+	-- "Tale of the Tape": tavo kovotojas vs varzovu diapazonas, kaip bokso transliacijoje
+	local tape = Kit.create("Frame", {
+		Name = "TaleOfTheTape",
+		BackgroundColor3 = C.bg,
+		BackgroundTransparency = 0.25,
+		Size = UDim2.new(1, 0, 0, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
+		LayoutOrder = 6,
+		Parent = campCard,
+	})
+	Kit.corner(tape, 10)
+	Kit.stroke(tape, C.border, 1, 0.5)
+	Kit.padding(tape, 10, 12, 12, 12)
+	Kit.list(tape, 6)
+	local tapeHeader = Kit.create("Frame", { Name = "Header", BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 20), LayoutOrder = 0, Parent = tape })
+	local tapeFighter = Kit.label({ parent = tapeHeader, name = "Fighter", text = "", bold = true, textSize = 12, color = C.goldBright, size = UDim2.new(0.34, 0, 1, 0) })
+	Kit.label({ parent = tapeHeader, name = "Title", text = "TALE OF THE TAPE", font = Enum.Font.Oswald, textSize = 14, color = C.textSecondary, align = Enum.TextXAlignment.Center, size = UDim2.new(0.34, 0, 1, 0), position = UDim2.new(0.33, 0, 0, 0) })
+	Kit.label({ parent = tapeHeader, name = "Opponent", text = "OPPONENT", bold = true, textSize = 12, color = C.crimsonBright, align = Enum.TextXAlignment.Right, size = UDim2.new(0.34, 0, 1, 0), position = UDim2.new(1, 0, 0, 0), anchor = Vector2.new(1, 0) })
+	local tapeRows = {}
+	for index, statId in ipairs({ "power", "speed", "defense", "stamina", "technique" }) do
+		local row = Kit.create("Frame", { Name = "Row_" .. statId, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 18), LayoutOrder = index, Parent = tape })
+		local mine = Kit.label({ parent = row, name = "Mine", text = "", bold = true, textSize = 12, size = UDim2.new(0, 30, 1, 0) })
+		local leftTrack = Kit.create("Frame", { Name = "LeftTrack", BackgroundColor3 = C.bgCardLight, AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 34, 0.5, 0), Size = UDim2.new(0.5, -80, 0, 6), Parent = row })
+		Kit.corner(leftTrack, UDim.new(1, 0))
+		local leftFill = Kit.create("Frame", { Name = "Fill", BackgroundColor3 = C.gold, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 0), Size = UDim2.new(0, 0, 1, 0), Parent = leftTrack })
+		Kit.corner(leftFill, UDim.new(1, 0))
+		Kit.label({ parent = row, name = "Stat", text = string.upper(Kit.translate("stats", statId)), font = Enum.Font.Oswald, textSize = 13, align = Enum.TextXAlignment.Center, size = UDim2.new(0, 84, 1, 0), position = UDim2.new(0.5, 0, 0, 0), anchor = Vector2.new(0.5, 0) })
+		local rightTrack = Kit.create("Frame", { Name = "RightTrack", BackgroundColor3 = C.bgCardLight, AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0.5, 44, 0.5, 0), Size = UDim2.new(0.5, -90, 0, 6), Parent = row })
+		Kit.corner(rightTrack, UDim.new(1, 0))
+		local rightFill = Kit.create("Frame", { Name = "Fill", BackgroundColor3 = C.crimsonBright, Size = UDim2.new(0, 0, 1, 0), Parent = rightTrack })
+		Kit.corner(rightFill, UDim.new(1, 0))
+		local theirs = Kit.label({ parent = row, name = "Theirs", text = "", bold = true, textSize = 12, align = Enum.TextXAlignment.Right, size = UDim2.new(0, 42, 1, 0), position = UDim2.new(1, 0, 0, 0), anchor = Vector2.new(1, 0) })
+		tapeRows[statId] = { mine = mine, theirs = theirs, leftFill = leftFill, rightFill = rightFill }
+	end
+	local function renderTape(student, tier)
+		tape.Visible = student ~= nil and tier ~= nil
+		if not tape.Visible then
+			return
+		end
+		tapeFighter.Text = string.upper(student.name or "")
+		local low, high = tier.opponentStatMin or 0, tier.opponentStatMax or 0
+		local mid = (low + high) / 2
+		for statId, row in pairs(tapeRows) do
+			local value = (student.stats and student.stats[statId]) or 0
+			local ahead = value >= mid
+			row.mine.Text = tostring(value)
+			row.mine.TextColor3 = ahead and C.goldBright or C.textSecondary
+			row.theirs.Text = string.format("%d–%d", low, high)
+			row.theirs.TextColor3 = ahead and C.textSecondary or C.crimsonBright
+			row.leftFill.Size = UDim2.new(math.clamp(value / 100, 0, 1), 0, 1, 0)
+			row.leftFill.BackgroundColor3 = ahead and C.goldBright or C.gold
+			row.leftFill.BackgroundTransparency = ahead and 0 or 0.45
+			row.rightFill.Size = UDim2.new(math.clamp(mid / 100, 0, 1), 0, 1, 0)
+			row.rightFill.BackgroundTransparency = ahead and 0.45 or 0
+		end
+	end
+
 	local enterButton = Kit.button({
 		parent = detailFooter,
 		name = "EnterButton",
@@ -662,8 +719,10 @@ function TournamentPanel.create(Kit, State)
 			checkRows.fatigue.row.Visible = false
 			checkRows.odds.row.Visible = false
 			oddsBar.Instance.Visible = false
+			renderTape(nil, nil)
 			return
 		end
+		renderTape(student, (tournamentTier(tournament)))
 		noFighterCallout.Visible = false
 		checkRows.ready.row.Visible = true
 		checkRows.health.row.Visible = true

@@ -104,7 +104,7 @@ local modulesFolder = make("Folder", "Modules", ReplicatedStorage)
 local MODULES = {
 	"DataSchema", "TrainingConfig", "EquipmentConfig", "MarketingConfig", "FightConfig", "AcademyConfig",
 	"InjuryConfig", "StaffConfig", "ScoutConfig", "SponsorConfig", "TournamentConfig", "MainHUDController",
-	"SoundConfig", "Sfx",
+	"SoundConfig", "Sfx", "IconConfig",
 }
 for _, name in ipairs(MODULES) do
 	local source = readFirst({
