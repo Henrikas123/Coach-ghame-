@@ -247,7 +247,7 @@ end
 -- Client scripts
 local starterScripts = {}
 local clientList = scenario.legacyScripts and { "MainHUDBootstrap", "PanelsBootstrap", "ReputationUI", "AcademyUI", "PhoneUI" }
-	or { "MainHUDBootstrap", "PanelsBootstrap", "ReputationUI", "Tutorial" }
+	or { "MainHUDBootstrap", "PanelsBootstrap", "ReputationUI", "Tutorial", "FightUI" }
 local playerScripts = make("Folder", "PlayerScripts", player)
 if scenario.intro then
 	-- krovimo ekranas (ReplicatedFirst) paleidziamas pirmas, tada titulinis ekranas

@@ -47,6 +47,48 @@ Visų panelių bendras stilius:
 - atsidarymas su „smūgio“ efektu;
 - garsai mygtukams, klaidoms ir atidarymui.
 
+## 4a. Kovos ekranas (`StarterPlayerScripts/FightUI`) — TV transliacija
+- **FIGHT NIGHT pasirinkimas:** prie ringo paspaudus E rodomi kovotojai su OVR kortelėmis, būsena ir „Send in“.
+- **Transliacijos grafika:**
+  - kino juostos su „FIGHT NIGHT ● LIVE“;
+  - „Tale of the Tape“ pristatymas (raudonas ir mėlynas kampai, statistikos juostos);
+  - rezultatų lenta su raundų taškais.
+- **Raundas:**
+  - „ROUND 1“ / „FIGHT!“ užrašai su gongu;
+  - momentum juosta su komentarais, kuri baigiasi tikru raundo rezultatu;
+  - „MARTIN TAKES R1“.
+- **Tarp raundų:** kampo planas su 4 pasirinkimais ir laikmačiu.
+- **Pabaiga:** WINNER / DEFEAT kortelė, pergalės atveju konfeti ir minios garsas.
+- **Serveris daro pauzes** (`FightConfig.IntroSeconds`, `RoundRevealSeconds`), kad animacijos spėtų.
+
+## 4b. Kasdienis prizas, užduotys, lyderių lenta (`RetentionHandler`, `GoalsPanel`)
+- **Prisijungimo serija:** 7 dienos, $100 → $1,000, 7-ą dieną +5 reputacijos. Praleidus dieną serija prasideda iš naujo. Dienos skaičiuojamos pagal UTC.
+- **Kasdienės užduotys:** 3 per dieną. Pirmoji visada įvykdoma naujokui, perprisijungus užduotys nesikeičia. Progresą praneša treniruočių, kovų, įrašų, rėmėjų, turnyrų, padrąsinimo ir skautų handleriai.
+- **Top Coaches:** reputacijos lyderių lenta (OrderedDataStore) „Daily Goals“ panelėje ir stende mieste prie salės išėjimo. Stendą (`Workspace.Town.LeaderboardBoard`) Studio galima perkelti.
+- **HUD:** mygtukas „DAILY GOALS“ viršuje dešinėje rodo atliktas užduotis ir raudoną tašką, kai yra ką atsiimti. Panelė pati atsidaro po PLAY, jei laukia dienos prizas.
+- **Konfigūracija:** `RetentionConfig.lua` (prizai, užduotys, jų atlygiai).
+
+## 4c. Pamoka pirmoms 5 minutėms (`TutorialHandler`, `Tutorial`, `TutorialConfig`)
+6 žingsniai:
+1. Sveikinimas.
+2. ACADEMY.
+3. 2 treniruotės (auksinis spindulys ir „TRAIN HERE“).
+4. Pirma kova („FIGHT HERE“).
+5. Įrašas telefone.
+6. Daily Goals.
+
+Pabaigoje +$250. HUD mygtukai paryškinami pulsuojančiu žiedu su rodykle. Grįžę žaidėjai su progresu pamoką praleidžia automatiškai, bet kas gali ją praleisti mygtuku „Skip guide“.
+
+Pirmasis kovotojas Alex dabar pradeda su statistikomis 14 (buvo 1). Taip jis pasiruošęs kovai po 2 treniruočių, ir pirma kova pasiekiama per pamoką.
+
+## 4d. Duomenų saugumas (`DataStoreHandler`)
+- **Pakartotiniai bandymai:** jei DataStore neatsako.
+- **Sesijos užraktas:** du serveriai niekada nerašo to paties profilio. Naujas serveris palaukia, kol senas išsaugos.
+- **Nepavykęs įkėlimas:** tuščias profilis niekada neišsaugomas, žaidėjui pasiūloma prisijungti iš naujo. Anksčiau būtent taip buvo galima prarasti visą progresą.
+- **Automatinis išsaugojimas:** kas 2 min, o išjungiant serverį visi saugomi lygiagrečiai.
+- **Seni išsaugojimai:** papildomi naujais laukais (`dataVersion`), NaN reikšmės išvalomos.
+- **Tikras išsaugojimas veikia tik paskelbtame žaidime:** Studio reikia Game Settings → Security → „Enable Studio Access to API Services“.
+
 ## 5. Garsai (`ReplicatedStorage/Modules/SoundConfig`)
 Kiekvienas garsas turi slotą su `id = ""`. Tuščias slotas tiesiog praleidžiamas, todėl žaidimas veikia ir be garsų. Įrašyk `"rbxassetid://..."`:
 

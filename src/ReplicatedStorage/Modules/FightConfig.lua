@@ -69,6 +69,8 @@ FightConfig.CornerOptions = {
 }
 FightConfig.CornerOptionOrder = { "Power", "Defense", "Stamina", "Technique" }
 
+FightConfig.IntroSeconds = 4 -- transliacijos pristatymas (tale of the tape) pries 1 raunda
+FightConfig.RoundRevealSeconds = 3.4 -- raundo animacija klientui pries kampo pasirinkima / rezultata
 FightConfig.CornerChoiceTimeout = 20 -- sek. kiek laukiame žaidėjo pasirinkimo tarp raundų
 
 -- Banga 2: kovos stiliaus dinamika -- kiekvienas stilius turi pranašumą prieš vieną kitą (5-stilių ciklas),

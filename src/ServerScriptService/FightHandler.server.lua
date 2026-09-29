@@ -159,8 +159,13 @@ local function runFight(player, profile, student, studentIndex)
 		opponentStyle = opponentStyle,
 		studentStyle = student.style,
 		styleNote = styleNote,
+		studentStats = student.stats,
+		opponentStats = opponentStats,
+		studentRecord = student.record,
+		studentPotential = student.potencialas,
+		totalRounds = FightConfig.Rounds,
 	})
-	task.wait(1.5)
+	task.wait(FightConfig.IntroSeconds or 1.5)
 
 	local studentRounds, opponentRounds = 0, 0
 	local nextBoostStat = nil
@@ -192,6 +197,8 @@ local function runFight(player, profile, student, studentIndex)
 			studentRounds = studentRounds,
 			opponentRounds = opponentRounds,
 		})
+		-- klientas rodo raundo animacija (transliacija); kampo laikmatis prasideda po jos
+		task.wait(FightConfig.RoundRevealSeconds or 0)
 
 		if round < FightConfig.Rounds then
 			push(player, {

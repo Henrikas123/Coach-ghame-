@@ -722,6 +722,39 @@ S.flow_tutorial_done = {
 		assert(p.pinigai == 500 + 250, "rookie bonus not paid: " .. tostring(p.pinigai))
 	end,
 }
+-- ============================================================
+-- KOVOS TRANSLIACIJA (FightUI)
+-- ============================================================
+local function startFight(api, seconds)
+	local remote = api.state().getService("ReplicatedStorage").Remotes.FightRequest
+	api.serverRun(function()
+		remote.OnServerEvent:Fire(api.player(), 1)
+	end, seconds)
+end
+S.fight_picker = {
+	seed = richSeed,
+	run = function(api)
+		api.state().sharedG.CoachAcademyFightUI.openPicker()
+		api.wait(1)
+	end,
+}
+S.fight_intro = { seed = richSeed, settle = 0, run = function(api) startFight(api, 2) end }
+S.fight_corner = { seed = richSeed, settle = 0, run = function(api) startFight(api, 8.6) end }
+S.fight_result = {
+	seed = richSeed,
+	settle = 0,
+	run = function(api)
+		startFight(api, 8.6)
+		api.click("FightGui/Broadcast/Corner/Options/Option_Power")
+		api.wait(4)
+		api.click("FightGui/Broadcast/Corner/Options/Option_Technique")
+		api.wait(5)
+	end,
+	check = function(api)
+		local card = api.find("FightGui/Broadcast/Result")
+		assert(card.Visible, "result card not shown")
+	end,
+}
 S.tournament_fresh = { seed = freshSeed, run = function(api) api.open("Tournament") end }
 S.flow_tournament_enter = {
 	seed = richSeed,
@@ -742,7 +775,7 @@ S.flow_career_fight = {
 		api.open("Tournament")
 		api.click("Panel_Tournament/Tabs/Tab_career")
 		api.click("Panel_Tournament/Career1/FightButton")
-		api.wait(50)
+		api.wait(75) -- transliacija: pristatymas + 3 raundu animacijos + 2 kampo laikmaciai
 	end,
 	check = function(api)
 		local alex = api.profile().studentsList[1]
